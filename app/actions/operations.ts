@@ -5,6 +5,25 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+const optionalUuid = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().uuid().optional(),
+);
+const optionalDecimal = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/)
+    .optional(),
+);
+const optionalRate = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .string()
+    .regex(/^\d+(\.\d{1,8})?$/)
+    .optional(),
+);
+
 const operationSchema = z.object({
   operation_type: z.enum([
     "cash_sale",
@@ -24,32 +43,23 @@ const operationSchema = z.object({
   description: z.string().trim().min(3).max(160),
   activity_code: z.string().optional(),
   operation_date: z.string().optional(),
-  product_id: z.string().uuid().optional(),
-  quantity: z
-    .string()
-    .regex(/^\d+(\.\d{1,4})?$/)
-    .optional(),
-  contact_id: z.string().uuid().optional(),
-  supplier_id: z.string().uuid().optional(),
-  sale_id: z.string().uuid().optional(),
+  product_id: optionalUuid,
+  quantity: optionalDecimal,
+  contact_id: optionalUuid,
+  supplier_id: optionalUuid,
+  sale_id: optionalUuid,
   due_date: z.string().optional(),
-  source_cash_account_id: z.string().uuid().optional(),
-  destination_cash_account_id: z.string().uuid().optional(),
-  destination_amount: z
-    .string()
-    .regex(/^\d+(\.\d{1,4})?$/)
-    .optional(),
-  destination_currency: z.enum(["USD", "CDF"]).optional(),
-  destination_exchange_rate: z
-    .string()
-    .regex(/^\d+(\.\d{1,8})?$/)
-    .optional(),
-  category_id: z.string().uuid().optional(),
-  savings_goal_id: z.string().uuid().optional(),
-  fees_source: z
-    .string()
-    .regex(/^\d+(\.\d{1,4})?$/)
-    .optional(),
+  source_cash_account_id: optionalUuid,
+  destination_cash_account_id: optionalUuid,
+  destination_amount: optionalDecimal,
+  destination_currency: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["USD", "CDF"]).optional(),
+  ),
+  destination_exchange_rate: optionalRate,
+  category_id: optionalUuid,
+  savings_goal_id: optionalUuid,
+  fees_source: optionalDecimal,
   idempotency_key: z.string().uuid(),
 });
 
