@@ -5,6 +5,27 @@ returns boolean language sql stable security definer set search_path=public as $
   select household_role(h) in ('owner','manager','operator')
 $$;
 
+-- The policy generator in the initial migration used a formatted identifier
+-- followed by a literal suffix, producing names such as
+-- activities_writer_write. Remove those legacy operator-write policies; the
+-- manager-only policies installed by 202607170003 remain authoritative.
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'activities','categories','contacts','products','iptv_plans','currencies',
+    'exchange_rates','ledger_accounts','cash_accounts','document_sequences',
+    'reconciliations','recurring_templates','inventory_locations',
+    'inventory_counts','inventory_count_lines','savings_goals','budgets',
+    'budget_lines','attachments','invitations','journal_entries','journal_lines',
+    'sales','sale_items','payments','iptv_subscriptions','billiard_sessions',
+    'expenses','purchases','purchase_items','stock_movements',
+    'savings_contributions'
+  ] loop
+    execute format('drop policy if exists %I on %I', t||'_writer_write', t);
+  end loop;
+end $$;
+
 create or replace function reverse_journal_entry(p_entry uuid, p_reason text)
 returns uuid language plpgsql security definer set search_path=public as $$
 declare

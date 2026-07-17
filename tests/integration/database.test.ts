@@ -420,19 +420,31 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         payload: { source_cash_account_id: refs.cashUsd },
       }),
     );
-    await asUser(operatorId, async (client) => {
-      await expect(
+    await asUser(operatorId, (client) =>
+      expect(
         client.query(
           "update activities set active=false where household_id=$1 and code='IPTV'",
           [refs.householdId],
         ),
-      ).rejects.toThrow(/row-level security/);
-      await expect(
+      ).rejects.toThrow(/row-level security/),
+    );
+    await asUser(operatorId, (client) =>
+      expect(
+        client.query(
+          `insert into journal_entries(
+            household_id,number,type,entry_date,status,created_by
+          ) values($1,$2,'manual',current_date,'draft',$3)`,
+          [refs.householdId, `OPERATOR-${randomUUID()}`, operatorId],
+        ),
+      ).rejects.toThrow(/row-level security/),
+    );
+    await asUser(operatorId, (client) =>
+      expect(
         client.query("select reverse_journal_entry($1,'Non autorisé')", [
           entry.id,
         ]),
-      ).rejects.toThrow(/not allowed/);
-    });
+      ).rejects.toThrow(/not allowed/),
+    );
   });
 
   it("reverses with balanced cash-account trace and keeps posted lines immutable", async () => {
