@@ -21,6 +21,7 @@ type References = {
 };
 
 const ownerId = randomUUID();
+const operatorId = randomUUID();
 const readerId = randomUUID();
 const otherOwnerId = randomUUID();
 let refs: References;
@@ -101,6 +102,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     try {
       for (const [id, email] of [
         [ownerId, `owner-${ownerId}@example.test`],
+        [operatorId, `operator-${operatorId}@example.test`],
         [readerId, `reader-${readerId}@example.test`],
         [otherOwnerId, `other-${otherOwnerId}@example.test`],
       ]) {
@@ -137,8 +139,9 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     const adminMember = await pool.connect();
     try {
       await adminMember.query(
-        "insert into household_members(household_id,user_id,role,status,joined_at) values($1,$2,'reader','active',now())",
-        [household.id, readerId],
+        `insert into household_members(household_id,user_id,role,status,joined_at)
+         values($1,$2,'reader','active',now()),($1,$3,'operator','active',now())`,
+        [household.id, readerId, operatorId],
       );
     } finally {
       adminMember.release();
@@ -404,6 +407,29 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         client.query("select * from current_stock_balance($1,$2)", [
           otherHouseholdId,
           refs.boxProduct,
+        ]),
+      ).rejects.toThrow(/not allowed/);
+    });
+  });
+
+  it("lets operators record operations but blocks administration and reversal", async () => {
+    const entry = await asUser(operatorId, (client) =>
+      record(client, {
+        type: "family_contribution",
+        amount: "2",
+        payload: { source_cash_account_id: refs.cashUsd },
+      }),
+    );
+    await asUser(operatorId, async (client) => {
+      await expect(
+        client.query(
+          "update activities set active=false where household_id=$1 and code='IPTV'",
+          [refs.householdId],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await expect(
+        client.query("select reverse_journal_entry($1,'Non autorisé')", [
+          entry.id,
         ]),
       ).rejects.toThrow(/not allowed/);
     });

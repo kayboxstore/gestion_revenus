@@ -15,6 +15,7 @@ export type DashboardActivity = {
   active: boolean;
 };
 export type DashboardOperation = {
+  id: string;
   number: string;
   type: string;
   status: string;
@@ -26,6 +27,8 @@ export type DashboardReference = {
   code?: string;
   type?: string;
   currency?: string;
+  target_amount?: string;
+  target_date?: string | null;
 };
 export type DashboardSale = {
   id: string;
@@ -37,6 +40,7 @@ export type DashboardData = {
   configured: boolean;
   authenticated: boolean;
   householdName: string | null;
+  role: "owner" | "manager" | "operator" | "reader" | null;
   kpis: DashboardKpis;
   activities: DashboardActivity[];
   operations: DashboardOperation[];
@@ -70,6 +74,7 @@ export async function getDashboardData(
       configured: false,
       authenticated: false,
       householdName: null,
+      role: null,
       kpis: zeroKpis,
       activities: [],
       operations: [],
@@ -90,6 +95,7 @@ export async function getDashboardData(
       configured: true,
       authenticated: false,
       householdName: null,
+      role: null,
       kpis: zeroKpis,
       activities: [],
       operations: [],
@@ -103,7 +109,7 @@ export async function getDashboardData(
 
   const { data: member } = await supabase
     .from("household_members")
-    .select("household_id, households(name)")
+    .select("household_id, role, households(name)")
     .eq("user_id", user.id)
     .eq("status", "active")
     .limit(1)
@@ -114,6 +120,7 @@ export async function getDashboardData(
       configured: true,
       authenticated: true,
       householdName: null,
+      role: null,
       kpis: zeroKpis,
       activities: [],
       operations: [],
@@ -128,7 +135,9 @@ export async function getDashboardData(
   const householdId = member.household_id as string;
   let operationsQuery = supabase
     .from("journal_entries")
-    .select("number,type,status,journal_lines(count)")
+    .select(
+      "id,number,type,status,journal_lines!journal_lines_journal_entry_id_fkey(count)",
+    )
     .eq("household_id", householdId)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -181,7 +190,7 @@ export async function getDashboardData(
       .order("name"),
     supabase
       .from("savings_goals")
-      .select("id,name,currency")
+      .select("id,name,currency,target_amount,target_date")
       .eq("household_id", householdId)
       .eq("status", "active")
       .order("priority"),
@@ -198,9 +207,11 @@ export async function getDashboardData(
     authenticated: true,
     householdName:
       (member.households as { name?: string } | null)?.name ?? "Foyer",
+    role: member.role as DashboardData["role"],
     kpis: (Array.isArray(kpis) ? kpis[0] : kpis) ?? zeroKpis,
     activities: (activities ?? []) as DashboardActivity[],
     operations: (operations ?? []).map((row) => ({
+      id: row.id,
       number: row.number,
       type: row.type,
       status: row.status,

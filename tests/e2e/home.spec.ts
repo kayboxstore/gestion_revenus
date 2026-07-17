@@ -65,4 +65,57 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     .locator("strong");
   await expect(revenueCard).toContainText("12");
   await expect(page.getByText("cash_sale", { exact: false })).toBeVisible();
+
+  await page.getByRole("link", { name: "Activités" }).click();
+  const billiard = page.locator("article").filter({ hasText: "BILLIARD" });
+  await billiard.locator('select[name="active"]').selectOption("true");
+  await billiard.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(page.getByText("Activité mise à jour.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Accueil" }).click();
+  await page.getByRole("link", { name: "Plus" }).click();
+  await page.getByLabel("Nom de l’objectif").fill("Urgences E2E");
+  await page.getByLabel("Montant cible").fill("100");
+  await page.getByRole("button", { name: "Créer l’objectif" }).click();
+  await expect(page.getByText("Objectif d’épargne créé.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Accueil" }).click();
+  await page.getByRole("link", { name: "Opérations" }).click();
+  await page
+    .locator('select[name="operation_type"]')
+    .selectOption("savings_contribution");
+  await page.locator('input[name="amount"]').fill("5");
+  await page.locator('select[name="source_cash_account_id"]').selectOption({
+    label: "Caisse USD · USD",
+  });
+  await page
+    .locator('select[name="destination_cash_account_id"]')
+    .selectOption({ label: "Épargne · USD" });
+  await page.locator('select[name="savings_goal_id"]').selectOption({
+    label: "Urgences E2E · USD",
+  });
+  await page.locator('input[name="description"]').fill("Épargne E2E");
+  await page.getByRole("button", { name: "Valider l’opération" }).click();
+  await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Accueil" }).click();
+  const savingsCard = page
+    .getByText("Épargne")
+    .first()
+    .locator("..")
+    .locator("strong");
+  await expect(savingsCard).toContainText("5");
+
+  await page.getByRole("link", { name: "Opérations" }).click();
+  const savingsEntry = page
+    .locator("li")
+    .filter({ hasText: "savings_contribution" })
+    .first();
+  await savingsEntry.getByLabel("Motif d’annulation").fill("Correction E2E");
+  await savingsEntry
+    .getByRole("button", { name: "Annuler l’écriture" })
+    .click();
+  await expect(
+    page.getByText("Écriture annulée par une écriture inverse traçable."),
+  ).toBeVisible();
 });

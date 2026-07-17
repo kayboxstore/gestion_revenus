@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { reverseOperation } from "@/app/actions/administration";
 import { createQuickOperation } from "@/app/actions/operations";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { SubmitButton } from "./submit-button";
@@ -25,6 +26,9 @@ const errorMessages: Record<string, string> = {
     "Cette soumission existe déjà avec des données différentes.",
   operation_failed:
     "L’opération n’a pas pu être validée. Vérifiez les comptes, devises et références choisis.",
+  reversal_validation:
+    "Indiquez un motif d’annulation d’au moins trois caractères.",
+  reversal_failed: "L’écriture n’a pas pu être annulée.",
 };
 
 export default async function Page({
@@ -34,6 +38,7 @@ export default async function Page({
 }) {
   const params = await searchParams;
   const data = await getDashboardData();
+  const canManage = data.role === "owner" || data.role === "manager";
   return (
     <main className="min-h-screen bg-slate-50 p-5 pb-24 text-slate-900">
       <Link href="/" className="text-blue-700">
@@ -46,7 +51,9 @@ export default async function Page({
       </p>
       {params.success && (
         <p className="mt-4 rounded-xl border border-green-300 bg-green-50 p-3 text-green-800">
-          Opération validée et persistée.
+          {params.success === "reversed"
+            ? "Écriture annulée par une écriture inverse traçable."
+            : "Opération validée et persistée."}
         </p>
       )}
       {params.error && (
@@ -316,6 +323,23 @@ export default async function Page({
                   <b>{op.number}</b> · {op.type}
                   <br />
                   {op.status} · {op.line_count} lignes
+                  {canManage && op.status === "posted" && (
+                    <form action={reverseOperation} className="mt-3 space-y-2">
+                      <input type="hidden" name="entry_id" value={op.id} />
+                      <label className="block font-medium text-red-800">
+                        Motif d’annulation
+                        <input
+                          name="reason"
+                          required
+                          minLength={3}
+                          className="mt-1 w-full rounded-lg border border-red-200 bg-white p-2 text-slate-900"
+                        />
+                      </label>
+                      <button className="rounded-lg border border-red-300 px-3 py-2 font-semibold text-red-800">
+                        Annuler l’écriture
+                      </button>
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>
