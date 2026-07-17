@@ -82,7 +82,12 @@ export async function getDashboardData(): Promise<DashboardData> {
   const householdId = member.household_id as string;
   const [{ data: kpis }, { data: activities }, { data: operations }] =
     await Promise.all([
-      supabase.rpc("get_dashboard_kpis", { p_household_id: householdId }),
+      supabase.rpc("get_dashboard_kpis", {
+        p_household_id: householdId,
+        p_from: null,
+        p_to: null,
+        p_activity_id: null,
+      }),
       supabase
         .from("activities")
         .select("code,name,active")

@@ -79,3 +79,109 @@ revoke all on function bootstrap_household(text,text) from public; grant execute
 revoke all on function post_journal_entry(uuid,text) from public; grant execute on function post_journal_entry(uuid,text) to authenticated;
 revoke all on function reverse_journal_entry(uuid,text) from public; grant execute on function reverse_journal_entry(uuid,text) to authenticated;
 revoke all on function get_dashboard_kpis(uuid) from public; grant execute on function get_dashboard_kpis(uuid) to authenticated;
+
+-- Hardening follow-up: same-household FKs, posted immutability, scoped dashboard and atomic operations.
+alter table households add constraint households_id_unique unique(id);
+alter table journal_entries add constraint journal_entries_household_id_id_unique unique(household_id,id);
+alter table ledger_accounts add constraint ledger_accounts_household_id_id_unique unique(household_id,id);
+alter table activities add constraint activities_household_id_id_unique unique(household_id,id);
+alter table cash_accounts add constraint cash_accounts_household_id_id_unique unique(household_id,id);
+
+alter table journal_lines add constraint journal_lines_entry_same_household foreign key(household_id,journal_entry_id) references journal_entries(household_id,id);
+alter table journal_lines add constraint journal_lines_account_same_household foreign key(household_id,ledger_account_id) references ledger_accounts(household_id,id);
+alter table journal_entries add constraint journal_entries_activity_same_household foreign key(household_id,activity_id) references activities(household_id,id);
+alter table cash_accounts add constraint cash_accounts_ledger_same_household foreign key(household_id,ledger_account_id) references ledger_accounts(household_id,id);
+
+create or replace function reject_direct_posted_entry() returns trigger language plpgsql as $$
+begin
+  if new.status = 'posted' and coalesce(current_setting('app.allow_posted_journal_insert', true),'') <> 'on' then
+    raise exception 'posted journal entries must be created by controlled RPC';
+  end if;
+  return new;
+end $$;
+drop trigger if exists journal_entries_no_direct_posted_insert on journal_entries;
+create trigger journal_entries_no_direct_posted_insert before insert on journal_entries for each row execute function reject_direct_posted_entry();
+
+create or replace function post_journal_entry(p_entry uuid, p_idempotency_key text) returns uuid language plpgsql security definer set search_path=public as $$
+declare h uuid; affected int;
+begin
+  if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+  select household_id into h from journal_entries where id=p_entry for update;
+  if h is null or not can_write_household(h) then raise exception 'not allowed'; end if;
+  perform assert_entry_can_post(p_entry);
+  update journal_entries set status='posted', posted_at=now(), idempotency_key=p_idempotency_key
+    where id=p_entry and status='draft' and idempotency_key is null;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'journal entry was not posted exactly once'; end if;
+  insert into audit_logs(household_id,actor_id,action,entity,entity_id,metadata) values(h,auth.uid(),'post','journal_entry',p_entry,jsonb_build_object('idempotency_key',p_idempotency_key));
+  return p_entry;
+end $$;
+
+create or replace function reverse_journal_entry(p_entry uuid, p_reason text) returns uuid language plpgsql security definer set search_path=public as $$
+declare original journal_entries%rowtype; new_id uuid := gen_random_uuid();
+begin
+  if nullif(trim(p_reason),'') is null then raise exception 'reversal reason required'; end if;
+  select * into original from journal_entries where id=p_entry and status='posted' for update;
+  if not found or not can_write_household(original.household_id) then raise exception 'not allowed'; end if;
+  perform set_config('app.allow_posted_journal_insert','on',true);
+  insert into journal_entries(id,household_id,number,type,entry_date,status,description,reversal_of,reversal_reason,created_by,posted_at)
+  values(new_id,original.household_id,original.number||'-REV','reversal',current_date,'posted','Annulation: '||p_reason,original.id,p_reason,auth.uid(),now());
+  insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate)
+  select household_id,new_id,ledger_account_id,credit_base,debit_base,currency,source_amount,exchange_rate from journal_lines where journal_entry_id=original.id;
+  update journal_entries set status='reversed' where id=original.id;
+  insert into audit_logs(household_id,actor_id,action,entity,entity_id,metadata) values(original.household_id,auth.uid(),'reverse','journal_entry',p_entry,jsonb_build_object('reason',p_reason,'reversal_entry_id',new_id));
+  return new_id;
+end $$;
+
+create or replace function get_dashboard_kpis(p_household_id uuid, p_from date default null, p_to date default null, p_activity_id uuid default null)
+returns table(revenue numeric,gross_profit numeric,net_profit numeric,family_expenses numeric,savings numeric,cash numeric) language sql stable security definer set search_path=public as $$
+ select
+  coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base else 0 end),0),
+  coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base when a.account_type='cogs' then l.credit_base-l.debit_base else 0 end),0),
+  coalesce(sum(case when a.account_type in ('income','cogs','operating_expense') then l.credit_base-l.debit_base else 0 end),0),
+  coalesce(sum(case when a.account_type='family_expense' then l.debit_base-l.credit_base else 0 end),0),
+  coalesce(sum(case when a.code='savings' then l.debit_base-l.credit_base else 0 end),0),
+  coalesce(sum(case when ca.id is not null and ca.type <> 'savings' then l.debit_base-l.credit_base else 0 end),0)
+ from journal_lines l
+ join journal_entries e on e.household_id=l.household_id and e.id=l.journal_entry_id
+ join ledger_accounts a on a.household_id=l.household_id and a.id=l.ledger_account_id
+ left join cash_accounts ca on ca.household_id=a.household_id and ca.ledger_account_id=a.id
+ where l.household_id=p_household_id and is_household_member(p_household_id) and e.status='posted'
+   and (p_from is null or e.entry_date >= p_from) and (p_to is null or e.entry_date <= p_to)
+   and (p_activity_id is null or e.activity_id=p_activity_id)
+$$;
+
+create or replace function record_financial_operation(p_household_id uuid, p_operation_type text, p_amount_source numeric, p_currency text, p_exchange_rate numeric, p_description text, p_activity_code text, p_idempotency_key text)
+returns uuid language plpgsql security definer set search_path=public as $$
+declare base_amount numeric(20,4) := round(p_amount_source * p_exchange_rate,4); entry_id uuid := gen_random_uuid(); activity uuid; debit_code text; credit_code text; n text; debit_account uuid; credit_account uuid;
+begin
+ if not can_write_household(p_household_id) then raise exception 'not allowed'; end if;
+ if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+ if p_amount_source <= 0 or p_exchange_rate <= 0 then raise exception 'amount and exchange rate must be positive'; end if;
+ select id into activity from activities where household_id=p_household_id and code=p_activity_code;
+ case p_operation_type
+  when 'cash_sale' then debit_code='cash'; credit_code='sales';
+  when 'credit_sale' then debit_code='receivable'; credit_code='sales';
+  when 'payment' then debit_code='cash'; credit_code='receivable';
+  when 'stock_purchase' then debit_code='inventory'; credit_code='cash';
+  when 'operating_expense' then debit_code='opex'; credit_code='cash';
+  when 'family_expense' then debit_code='family'; credit_code='cash';
+  when 'transfer' then debit_code='cash'; credit_code='cash';
+  when 'family_contribution' then debit_code='cash'; credit_code='equity';
+  when 'family_withdrawal' then debit_code='equity'; credit_code='cash';
+  when 'savings_contribution' then debit_code='savings'; credit_code='cash';
+  else raise exception 'unsupported operation type %', p_operation_type;
+ end case;
+ select id into debit_account from ledger_accounts where household_id=p_household_id and code=debit_code;
+ select id into credit_account from ledger_accounts where household_id=p_household_id and code=credit_code;
+ n := upper(substr(p_operation_type,1,3)) || '-' || to_char(clock_timestamp(),'YYYYMMDDHH24MISSMS');
+ insert into journal_entries(id,household_id,number,type,entry_date,status,description,activity_id,created_by)
+ values(entry_id,p_household_id,n,p_operation_type,current_date,'draft',p_description,activity,auth.uid());
+ insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values
+ (p_household_id,entry_id,debit_account,base_amount,0,p_currency,p_amount_source,p_exchange_rate),
+ (p_household_id,entry_id,credit_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ perform post_journal_entry(entry_id,p_idempotency_key);
+ return entry_id;
+end $$;
+revoke all on function record_financial_operation(uuid,text,numeric,text,numeric,text,text,text) from public; grant execute on function record_financial_operation(uuid,text,numeric,text,numeric,text,text,text) to authenticated;
+revoke all on function get_dashboard_kpis(uuid,date,date,uuid) from public; grant execute on function get_dashboard_kpis(uuid,date,date,uuid) to authenticated;
