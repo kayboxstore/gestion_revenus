@@ -11,6 +11,8 @@ jobs:
         with: { version: latest }
       - run: npm ci
       - run: supabase --version
+      - run: supabase start
+      - run: supabase db reset --local
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test

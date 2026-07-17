@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createQuickOperation } from "@/app/actions/operations";
 import { getDashboardData } from "@/lib/dashboard/queries";
+import { SubmitButton } from "./submit-button";
 
 const types = [
   ["cash_sale", "Vente encaissée"],
@@ -132,9 +133,12 @@ export default async function Page({
                 className="mt-1 w-full rounded-xl border p-3"
               />
             </label>
-            <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white disabled:opacity-60">
-              Valider l’opération
-            </button>
+            <input
+              name="idempotency_key"
+              type="hidden"
+              value={crypto.randomUUID()}
+            />
+            <SubmitButton />
           </form>
           <aside className="rounded-2xl border bg-white p-4 shadow-sm">
             <h2 className="text-xl font-semibold">Dernières écritures</h2>

@@ -185,3 +185,135 @@ begin
 end $$;
 revoke all on function record_financial_operation(uuid,text,numeric,text,numeric,text,text,text) from public; grant execute on function record_financial_operation(uuid,text,numeric,text,numeric,text,text,text) to authenticated;
 revoke all on function get_dashboard_kpis(uuid,date,date,uuid) from public; grant execute on function get_dashboard_kpis(uuid,date,date,uuid) to authenticated;
+
+-- Consolidation pass: block all direct posting transitions, owner-scoped administration,
+-- same-household references and vertical business documents for quick operations.
+create or replace function reject_direct_posted_entry() returns trigger language plpgsql as $$
+begin
+  if new.status = 'posted'
+     and (tg_op = 'INSERT' or old.status is distinct from 'posted')
+     and coalesce(current_setting('app.allow_posted_journal_insert', true),'') <> 'on' then
+    raise exception 'posted journal entries must be created by controlled RPC';
+  end if;
+  return new;
+end $$;
+drop trigger if exists journal_entries_no_direct_posted_insert on journal_entries;
+drop trigger if exists journal_entries_no_direct_posted_transition on journal_entries;
+create trigger journal_entries_no_direct_posted_transition before insert or update of status on journal_entries for each row execute function reject_direct_posted_entry();
+
+create or replace function post_journal_entry(p_entry uuid, p_idempotency_key text) returns uuid language plpgsql security definer set search_path=public as $$
+declare h uuid; existing_entry uuid; existing_status journal_status;
+begin
+  if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+  select id,status into existing_entry,existing_status from journal_entries where idempotency_key=p_idempotency_key for update;
+  if existing_entry is not null and existing_entry <> p_entry then raise exception 'idempotency key already used for another operation'; end if;
+  if existing_entry = p_entry and existing_status = 'posted' then return p_entry; end if;
+  select household_id,status into h,existing_status from journal_entries where id=p_entry for update;
+  if h is null or not can_write_household(h) then raise exception 'not allowed'; end if;
+  if existing_status <> 'draft' then raise exception 'only draft journal entries can be posted'; end if;
+  perform assert_entry_can_post(p_entry);
+  perform set_config('app.allow_posted_journal_insert','on',true);
+  update journal_entries set status='posted', posted_at=now(), idempotency_key=p_idempotency_key where id=p_entry;
+  insert into audit_logs(household_id,actor_id,action,entity,entity_id,metadata) values(h,auth.uid(),'post','journal_entry',p_entry,jsonb_build_object('idempotency_key',p_idempotency_key));
+  return p_entry;
+end $$;
+
+create or replace function can_manage_household(h uuid) returns boolean language sql stable security definer set search_path=public as $$ select household_role(h) in ('owner','manager') $$;
+create or replace function can_operate_household(h uuid) returns boolean language sql stable security definer set search_path=public as $$ select household_role(h) in ('owner','manager','operator') $$;
+
+-- Owner-only administration adapted from the previous hardening pass; operators mutate only through RPCs.
+do $$
+declare t text;
+begin
+  foreach t in array array['activities','categories','contacts','products','iptv_plans','currencies','exchange_rates','ledger_accounts','cash_accounts','document_sequences','reconciliations','recurring_templates','inventory_locations','inventory_counts','inventory_count_lines','savings_goals','budgets','budget_lines','attachments','invitations'] loop
+    execute format('drop policy if exists %I on %I', t||'_writer', t);
+    execute format('drop policy if exists %I on %I', t||'_member_write', t);
+    execute format('create policy %I on %I for all using (can_manage_household(household_id)) with check (can_manage_household(household_id))', t||'_manager_write', t);
+  end loop;
+  foreach t in array array['journal_entries','journal_lines','sales','sale_items','payments','iptv_subscriptions','billiard_sessions','expenses','purchases','purchase_items','stock_movements','savings_contributions'] loop
+    execute format('drop policy if exists %I on %I', t||'_writer', t);
+    execute format('drop policy if exists %I on %I', t||'_member_write', t);
+    execute format('create policy %I on %I for all using (can_manage_household(household_id)) with check (can_manage_household(household_id))', t||'_manager_direct_write', t);
+  end loop;
+end $$;
+
+alter table contacts add constraint contacts_household_id_id_unique unique(household_id,id);
+alter table products add constraint products_household_id_id_unique unique(household_id,id);
+alter table categories add constraint categories_household_id_id_unique unique(household_id,id);
+alter table inventory_locations add constraint inventory_locations_household_id_id_unique unique(household_id,id);
+alter table sales add constraint sales_household_id_id_unique unique(household_id,id);
+alter table purchases add constraint purchases_household_id_id_unique unique(household_id,id);
+alter table savings_goals add constraint savings_goals_household_id_id_unique unique(household_id,id);
+alter table sales add constraint sales_activity_same_household foreign key(household_id,activity_id) references activities(household_id,id);
+alter table sale_items add constraint sale_items_sale_same_household foreign key(household_id,sale_id) references sales(household_id,id);
+alter table sale_items add constraint sale_items_product_same_household foreign key(household_id,product_id) references products(household_id,id);
+alter table payments add constraint payments_sale_same_household foreign key(household_id,sale_id) references sales(household_id,id);
+alter table payments add constraint payments_cash_same_household foreign key(household_id,cash_account_id) references cash_accounts(household_id,id);
+alter table expenses add constraint expenses_category_same_household foreign key(household_id,category_id) references categories(household_id,id);
+alter table expenses add constraint expenses_cash_same_household foreign key(household_id,cash_account_id) references cash_accounts(household_id,id);
+alter table purchases add constraint purchases_cash_same_household foreign key(household_id,cash_account_id) references cash_accounts(household_id,id);
+alter table purchase_items add constraint purchase_items_purchase_same_household foreign key(household_id,purchase_id) references purchases(household_id,id);
+alter table purchase_items add constraint purchase_items_product_same_household foreign key(household_id,product_id) references products(household_id,id);
+alter table stock_movements add constraint stock_movements_product_same_household foreign key(household_id,product_id) references products(household_id,id);
+alter table stock_movements add constraint stock_movements_location_same_household foreign key(household_id,location_id) references inventory_locations(household_id,id);
+alter table savings_contributions add constraint savings_contributions_goal_same_household foreign key(household_id,savings_goal_id) references savings_goals(household_id,id);
+alter table savings_contributions add constraint savings_contributions_source_cash_same_household foreign key(household_id,source_cash_account_id) references cash_accounts(household_id,id);
+alter table savings_contributions add constraint savings_contributions_savings_cash_same_household foreign key(household_id,savings_cash_account_id) references cash_accounts(household_id,id);
+
+create or replace function record_financial_operation(p_household_id uuid, p_operation_type text, p_amount_source numeric, p_currency text, p_exchange_rate numeric, p_description text, p_activity_code text, p_idempotency_key text)
+returns uuid language plpgsql security definer set search_path=public as $$
+declare base_amount numeric(20,4) := round(p_amount_source * p_exchange_rate,4); entry_id uuid := gen_random_uuid(); activity uuid; n text; cash_account uuid; second_cash uuid; savings_cash uuid; loc uuid; prod uuid; goal uuid; sale_id uuid; purchase_id uuid; expense_id uuid; payment_id uuid; debit_account uuid; credit_account uuid; inventory_account uuid; cogs_account uuid; sales_account uuid; receivable_account uuid; equity_account uuid; opex_account uuid; family_account uuid; savings_account uuid; unit_cost numeric(20,4) := round(base_amount * 0.60,4);
+begin
+ if not can_operate_household(p_household_id) then raise exception 'not allowed'; end if;
+ if nullif(trim(p_idempotency_key),'') is null then raise exception 'idempotency key required'; end if;
+ select id into entry_id from journal_entries where household_id=p_household_id and idempotency_key=p_idempotency_key;
+ if entry_id is not null then return entry_id; end if;
+ if p_amount_source <= 0 or p_exchange_rate <= 0 then raise exception 'amount and exchange rate must be positive'; end if;
+ select id into activity from activities where household_id=p_household_id and code=coalesce(nullif(p_activity_code,''),'IPTV');
+ select id into cash_account from cash_accounts where household_id=p_household_id and currency=p_currency and type <> 'savings' order by name limit 1;
+ select id into second_cash from cash_accounts where household_id=p_household_id and id <> cash_account and type <> 'savings' order by name limit 1;
+ select id into savings_cash from cash_accounts where household_id=p_household_id and type='savings' order by name limit 1;
+ select id into loc from inventory_locations where household_id=p_household_id and primary_location order by name limit 1;
+ select id into prod from products where household_id=p_household_id and activity_id=activity and active order by name limit 1;
+ select id into goal from savings_goals where household_id=p_household_id and status='active' order by priority,id limit 1;
+ select id into debit_account from ledger_accounts where household_id=p_household_id and code='cash';
+ select id into inventory_account from ledger_accounts where household_id=p_household_id and code='inventory';
+ select id into receivable_account from ledger_accounts where household_id=p_household_id and code='receivable';
+ select id into savings_account from ledger_accounts where household_id=p_household_id and code='savings';
+ select id into sales_account from ledger_accounts where household_id=p_household_id and code='sales';
+ select id into cogs_account from ledger_accounts where household_id=p_household_id and code='cogs';
+ select id into opex_account from ledger_accounts where household_id=p_household_id and code='opex';
+ select id into family_account from ledger_accounts where household_id=p_household_id and code='family';
+ select id into equity_account from ledger_accounts where household_id=p_household_id and code='equity';
+ n := upper(substr(p_operation_type,1,3)) || '-' || to_char(clock_timestamp(),'YYYYMMDDHH24MISSMS');
+ insert into journal_entries(id,household_id,number,type,entry_date,status,description,activity_id,created_by) values(entry_id,p_household_id,n,p_operation_type,current_date,'draft',p_description,activity,auth.uid());
+ if p_operation_type in ('cash_sale','credit_sale') then
+   insert into sales(id,household_id,number,activity_id,sale_date,status,currency,total_source,total_base,journal_entry_id) values(gen_random_uuid(),p_household_id,n,activity,current_date,case when p_operation_type='cash_sale' then 'paid'::sale_status else 'confirmed'::sale_status end,p_currency,p_amount_source,base_amount,entry_id) returning id into sale_id;
+   insert into sale_items(household_id,sale_id,product_id,description,quantity,unit_price,unit_cost,total_source,total_base) values(p_household_id,sale_id,prod,p_description,1,p_amount_source,unit_cost,p_amount_source,base_amount);
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,case when p_operation_type='cash_sale' then debit_account else receivable_account end,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,sales_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+   if prod is not null then insert into stock_movements(household_id,product_id,location_id,type,quantity,unit_cost_base,reference_type,reference_id,movement_date) values(p_household_id,prod,loc,'sale',-1,unit_cost,'sale',sale_id,current_date); insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,cogs_account,unit_cost,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,inventory_account,0,unit_cost,p_currency,p_amount_source,p_exchange_rate); end if;
+ elsif p_operation_type='payment' then
+   insert into payments(household_id,cash_account_id,amount_source,currency,exchange_rate,payment_date,status,journal_entry_id) values(p_household_id,cash_account,p_amount_source,p_currency,p_exchange_rate,current_date,'posted',entry_id) returning id into payment_id;
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,debit_account,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,receivable_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ elsif p_operation_type='stock_purchase' then
+   insert into purchases(id,household_id,cash_account_id,purchase_date,currency,total_source,total_base,status,journal_entry_id) values(gen_random_uuid(),p_household_id,cash_account,current_date,p_currency,p_amount_source,base_amount,'posted',entry_id) returning id into purchase_id;
+   if prod is not null then insert into purchase_items(household_id,purchase_id,product_id,quantity,unit_cost,total_source) values(p_household_id,purchase_id,prod,1,p_amount_source,p_amount_source); insert into stock_movements(household_id,product_id,location_id,type,quantity,unit_cost_base,reference_type,reference_id,movement_date) values(p_household_id,prod,loc,'purchase',1,base_amount,'purchase',purchase_id,current_date); end if;
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,inventory_account,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,debit_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ elsif p_operation_type in ('operating_expense','family_expense') then
+   insert into expenses(household_id,category_id,cash_account_id,activity_id,scope,expense_date,amount_source,amount_base,currency,status,journal_entry_id) select p_household_id,c.id,cash_account,activity,case when p_operation_type='operating_expense' then 'operating' else 'family' end,current_date,p_amount_source,base_amount,p_currency,'posted',entry_id from categories c where c.household_id=p_household_id and c.type=case when p_operation_type='operating_expense' then 'operating_expense' else 'family_expense' end order by name limit 1 returning id into expense_id;
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,case when p_operation_type='operating_expense' then opex_account else family_account end,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,debit_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ elsif p_operation_type='transfer' then
+   if cash_account is null or second_cash is null or cash_account=second_cash then raise exception 'transfer requires distinct source and destination cash accounts'; end if;
+   insert into payments(household_id,cash_account_id,amount_source,currency,exchange_rate,payment_date,status,journal_entry_id) values(p_household_id,second_cash,p_amount_source,p_currency,p_exchange_rate,current_date,'posted',entry_id);
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,debit_account,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,debit_account,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ elsif p_operation_type in ('family_contribution','family_withdrawal','savings_contribution') then
+   if p_operation_type='savings_contribution' then
+     if goal is null then insert into savings_goals(household_id,name,target_amount,currency,priority,status) values(p_household_id,'Épargne générale',p_amount_source,p_currency,1,'active') returning id into goal; end if;
+     insert into savings_contributions(household_id,savings_goal_id,source_cash_account_id,savings_cash_account_id,amount_source,contribution_date,journal_entry_id) values(p_household_id,goal,cash_account,savings_cash,p_amount_source,current_date,entry_id);
+   end if;
+   insert into journal_lines(household_id,journal_entry_id,ledger_account_id,debit_base,credit_base,currency,source_amount,exchange_rate) values (p_household_id,entry_id,case when p_operation_type='family_withdrawal' then equity_account when p_operation_type='savings_contribution' then savings_account else debit_account end,base_amount,0,p_currency,p_amount_source,p_exchange_rate),(p_household_id,entry_id,case when p_operation_type='family_withdrawal' then debit_account when p_operation_type='savings_contribution' then debit_account else equity_account end,0,base_amount,p_currency,p_amount_source,p_exchange_rate);
+ else raise exception 'unsupported operation type %', p_operation_type;
+ end if;
+ perform post_journal_entry(entry_id,p_idempotency_key);
+ return entry_id;
+end $$;
