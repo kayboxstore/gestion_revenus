@@ -8,7 +8,12 @@ export type DashboardKpis = {
   savings: string;
   cash: string;
 };
-export type DashboardActivity = { code: string; name: string; active: boolean };
+export type DashboardActivity = {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+};
 export type DashboardOperation = {
   number: string;
   type: string;
@@ -51,7 +56,15 @@ const zeroKpis: DashboardKpis = {
   cash: "0.0000",
 };
 
-export async function getDashboardData(): Promise<DashboardData> {
+export type DashboardFilters = {
+  from?: string | null;
+  to?: string | null;
+  activityId?: string | null;
+};
+
+export async function getDashboardData(
+  filters: DashboardFilters = {},
+): Promise<DashboardData> {
   if (!hasSupabaseEnv()) {
     return {
       configured: false,
@@ -113,6 +126,19 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   const householdId = member.household_id as string;
+  let operationsQuery = supabase
+    .from("journal_entries")
+    .select("number,type,status,journal_lines(count)")
+    .eq("household_id", householdId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (filters.from)
+    operationsQuery = operationsQuery.gte("entry_date", filters.from);
+  if (filters.to)
+    operationsQuery = operationsQuery.lte("entry_date", filters.to);
+  if (filters.activityId)
+    operationsQuery = operationsQuery.eq("activity_id", filters.activityId);
+
   const [
     { data: kpis },
     { data: activities },
@@ -125,21 +151,16 @@ export async function getDashboardData(): Promise<DashboardData> {
   ] = await Promise.all([
     supabase.rpc("get_dashboard_kpis", {
       p_household_id: householdId,
-      p_from: null,
-      p_to: null,
-      p_activity_id: null,
+      p_from: filters.from ?? null,
+      p_to: filters.to ?? null,
+      p_activity_id: filters.activityId ?? null,
     }),
     supabase
       .from("activities")
-      .select("code,name,active")
+      .select("id,code,name,active")
       .eq("household_id", householdId)
       .order("display_order"),
-    supabase
-      .from("journal_entries")
-      .select("number,type,status,journal_lines(count)")
-      .eq("household_id", householdId)
-      .order("created_at", { ascending: false })
-      .limit(10),
+    operationsQuery,
     supabase
       .from("products")
       .select("id,name,type")

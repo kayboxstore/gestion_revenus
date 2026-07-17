@@ -16,6 +16,17 @@ const types = [
   ["savings_contribution", "Contribution épargne"],
 ] as const;
 
+const errorMessages: Record<string, string> = {
+  validation: "Vérifiez les champs obligatoires et les formats saisis.",
+  not_allowed: "Votre rôle ne permet pas d’enregistrer cette opération.",
+  insufficient_stock: "Le stock disponible est insuffisant.",
+  payment_exceeds_sale_balance: "Le paiement dépasse le solde de la vente.",
+  idempotency_key_conflict_for_household:
+    "Cette soumission existe déjà avec des données différentes.",
+  operation_failed:
+    "L’opération n’a pas pu être validée. Vérifiez les comptes, devises et références choisis.",
+};
+
 export default async function Page({
   searchParams,
 }: {
@@ -40,7 +51,7 @@ export default async function Page({
       )}
       {params.error && (
         <p className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800">
-          Erreur : {params.error}
+          {errorMessages[params.error] ?? errorMessages.operation_failed}
         </p>
       )}
       {!data.authenticated ? (
@@ -209,6 +220,37 @@ export default async function Page({
                       </option>
                     ))}
                   </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <label className="block text-sm font-medium">
+                  Montant reçu (transfert)
+                  <input
+                    name="destination_amount"
+                    inputMode="decimal"
+                    placeholder="Même montant"
+                    className="mt-1 w-full rounded-xl border p-3"
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Devise reçue
+                  <select
+                    name="destination_currency"
+                    className="mt-1 w-full rounded-xl border p-3"
+                  >
+                    <option value="">Même devise</option>
+                    <option value="USD">USD</option>
+                    <option value="CDF">CDF</option>
+                  </select>
+                </label>
+                <label className="block text-sm font-medium">
+                  Taux reçu vers USD
+                  <input
+                    name="destination_exchange_rate"
+                    inputMode="decimal"
+                    placeholder="Même taux"
+                    className="mt-1 w-full rounded-xl border p-3"
+                  />
                 </label>
               </div>
               <label className="block text-sm font-medium">

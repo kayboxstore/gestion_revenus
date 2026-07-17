@@ -35,6 +35,15 @@ const operationSchema = z.object({
   due_date: z.string().optional(),
   source_cash_account_id: z.string().uuid().optional(),
   destination_cash_account_id: z.string().uuid().optional(),
+  destination_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/)
+    .optional(),
+  destination_currency: z.enum(["USD", "CDF"]).optional(),
+  destination_exchange_rate: z
+    .string()
+    .regex(/^\d+(\.\d{1,8})?$/)
+    .optional(),
   category_id: z.string().uuid().optional(),
   savings_goal_id: z.string().uuid().optional(),
   fees_source: z
@@ -77,12 +86,25 @@ export async function createQuickOperation(formData: FormData) {
       source_cash_account_id: parsed.data.source_cash_account_id || undefined,
       destination_cash_account_id:
         parsed.data.destination_cash_account_id || undefined,
+      destination_amount_source: parsed.data.destination_amount || undefined,
+      destination_currency: parsed.data.destination_currency || undefined,
+      destination_exchange_rate:
+        parsed.data.destination_exchange_rate || undefined,
       category_id: parsed.data.category_id || undefined,
       savings_goal_id: parsed.data.savings_goal_id || undefined,
       fees_source: parsed.data.fees_source || undefined,
     },
   });
-  if (error) redirect(`/operations?error=${encodeURIComponent(error.message)}`);
+  if (error) {
+    const knownError = [
+      "not allowed",
+      "insufficient stock",
+      "payment exceeds sale balance",
+      "idempotency key conflict for household",
+    ].find((message) => error.message.includes(message));
+    const code = knownError?.replaceAll(" ", "_") ?? "operation_failed";
+    redirect(`/operations?error=${code}`);
+  }
   revalidatePath("/");
   revalidatePath("/operations");
   redirect("/operations?success=1");

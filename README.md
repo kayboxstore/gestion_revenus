@@ -23,6 +23,8 @@ supabase db reset
 
 La migration crée le bootstrap atomique `bootstrap_household`, les tables du modèle logique, les politiques RLS par foyer et les RPC d'écriture/annulation comptable.
 
+Les tests d'intégration se connectent réellement à PostgreSQL via `TEST_DATABASE_URL`. Ils appellent les RPC sous le rôle Supabase `authenticated` et prouvent le coût moyen, l'équilibre des écritures, l'idempotence, l'annulation, les droits Lecteur et l'isolation entre foyers. La CI démarre Supabase local avant de les exécuter.
+
 ## Validation
 
 ```bash
@@ -34,6 +36,8 @@ npm run test:integration
 npm run build
 npm run test:e2e
 ```
+
+Sans Supabase local, les scénarios PostgreSQL et le parcours E2E authentifié sont explicitement ignorés ; ils ne sont jamais remplacés par une lecture textuelle des migrations.
 
 ## Documentation
 

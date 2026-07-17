@@ -3,8 +3,63 @@ import { signOut } from "@/app/actions/auth";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { formatMoney } from "@/lib/finance/money";
 
-export default async function Home() {
-  const data = await getDashboardData();
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function periodRange(period: string, customFrom?: string, customTo?: string) {
+  if (period === "all") return { from: null, to: null };
+  if (period === "custom") {
+    return {
+      from: customFrom && datePattern.test(customFrom) ? customFrom : null,
+      to: customTo && datePattern.test(customTo) ? customTo : null,
+    };
+  }
+  const kinshasaToday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Kinshasa",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const to = new Date(`${kinshasaToday}T00:00:00Z`);
+  const from = new Date(to);
+  if (period === "today") return { from: isoDate(from), to: isoDate(to) };
+  if (period === "week")
+    from.setUTCDate(from.getUTCDate() - ((from.getUTCDay() + 6) % 7));
+  else if (period === "quarter")
+    from.setUTCMonth(Math.floor(from.getUTCMonth() / 3) * 3, 1);
+  else if (period === "year") from.setUTCMonth(0, 1);
+  else from.setUTCDate(1);
+  return { from: isoDate(from), to: isoDate(to) };
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+  const period = [
+    "today",
+    "week",
+    "month",
+    "quarter",
+    "year",
+    "custom",
+    "all",
+  ].includes(params.period ?? "")
+    ? (params.period as string)
+    : "month";
+  const range = periodRange(period, params.from, params.to);
+  const activityId =
+    params.activity && uuidPattern.test(params.activity)
+      ? params.activity
+      : null;
+  const data = await getDashboardData({ ...range, activityId });
   const cards = [
     ["Chiffre d’affaires", data.kpis.revenue],
     ["Bénéfice brut", data.kpis.gross_profit],
@@ -61,6 +116,68 @@ export default async function Home() {
           >
             Créer le premier foyer
           </Link>
+        </section>
+      )}
+
+      {data.authenticated && data.householdName && (
+        <section className="px-4 pt-5">
+          <form
+            className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5"
+            method="get"
+          >
+            <label className="text-sm font-medium">
+              Période
+              <select
+                name="period"
+                defaultValue={period}
+                className="mt-1 w-full rounded-xl border p-3"
+              >
+                <option value="today">Aujourd’hui</option>
+                <option value="week">Cette semaine</option>
+                <option value="month">Ce mois</option>
+                <option value="quarter">Ce trimestre</option>
+                <option value="year">Cette année</option>
+                <option value="custom">Intervalle personnalisé</option>
+                <option value="all">Toute la période</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              Activité
+              <select
+                name="activity"
+                defaultValue={activityId ?? ""}
+                className="mt-1 w-full rounded-xl border p-3"
+              >
+                <option value="">Toutes les activités</option>
+                {data.activities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              Du
+              <input
+                name="from"
+                type="date"
+                defaultValue={params.from ?? ""}
+                className="mt-1 w-full rounded-xl border p-3"
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Au
+              <input
+                name="to"
+                type="date"
+                defaultValue={params.to ?? ""}
+                className="mt-1 w-full rounded-xl border p-3"
+              />
+            </label>
+            <button className="self-end rounded-xl bg-night px-4 py-3 font-semibold text-white">
+              Appliquer
+            </button>
+          </form>
         </section>
       )}
 

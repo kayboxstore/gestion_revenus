@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gestion des revenus">
+  <rect width="512" height="512" rx="112" fill="#0f2742"/>
+  <path d="M112 344V216c0-31 25-56 56-56h176c31 0 56 25 56 56v128c0 31-25 56-56 56H168c-31 0-56-25-56-56Z" fill="#fff"/>
+  <path d="M144 200v-24c0-35 29-64 64-64h152v48H208c-9 0-16 7-16 16v24h-48Z" fill="#3b82f6"/>
+  <rect x="304" y="248" width="112" height="72" rx="28" fill="#2563eb"/>
+  <circle cx="344" cy="284" r="12" fill="#fff"/>
+</svg>

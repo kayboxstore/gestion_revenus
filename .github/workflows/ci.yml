@@ -9,6 +9,7 @@ jobs:
       TEST_MANAGER_EMAIL: manager@example.test
       TEST_OPERATOR_EMAIL: operator@example.test
       TEST_READER_EMAIL: reader@example.test
+      TEST_OWNER_PASSWORD: Test-password-1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,7 +20,17 @@ jobs:
       - run: supabase --version
       - run: supabase start
       - run: supabase db reset --local
+      - name: Export local Supabase credentials
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/supabase.env
+          set -a
+          source /tmp/supabase.env
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "TEST_SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
       - run: npm run lint
+      - run: npm run format
       - run: npm run typecheck
       - run: npm run test
       - run: npm run test:integration
