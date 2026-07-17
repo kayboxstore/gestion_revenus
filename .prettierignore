@@ -4,3 +4,8 @@ package-lock.json
 playwright-report
 test-results
 coverage
+AGENTS.md
+docs/PRODUCT_SPEC.md
+docs/ARCHITECTURE.md
+docs/DATA_MODEL.md
+docs/CODEX_WEB_MASTER_PROMPT.md

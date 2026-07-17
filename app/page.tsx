@@ -1,43 +1,69 @@
 import Link from "next/link";
-import {
-  defaultActivities,
-  familyExpense,
-  saleCash,
-  savingsContribution,
-  summarize,
-  transfer,
-} from "@/lib/finance/domain";
+import { signOut } from "@/app/actions/auth";
+import { getDashboardData } from "@/lib/dashboard/queries";
 import { formatMoney } from "@/lib/finance/money";
-const entries = [
-  saleCash("120", "40", "USD", "1"),
-  saleCash("150000", "60000", "CDF", "0.00035"),
-  familyExpense("18"),
-  transfer("25"),
-  savingsContribution("15"),
-];
-const totals = summarize(entries);
-const cards = [
-  ["Chiffre d’affaires", totals.revenue],
-  ["Bénéfice brut", totals.grossProfit],
-  ["Bénéfice net", totals.netProfit],
-  ["Dépenses familiales", totals.familyExpenses],
-  ["Épargne", totals.savings],
-  ["Trésorerie", totals.cash],
-];
-export default function Home() {
+
+export default async function Home() {
+  const data = await getDashboardData();
+  const cards = [
+    ["Chiffre d’affaires", data.kpis.revenue],
+    ["Bénéfice brut", data.kpis.gross_profit],
+    ["Bénéfice net", data.kpis.net_profit],
+    ["Dépenses familiales", data.kpis.family_expenses],
+    ["Épargne", data.kpis.savings],
+    ["Trésorerie", data.kpis.cash],
+  ];
   return (
     <main className="min-h-screen bg-slate-50 pb-28 text-slate-900">
       <section className="bg-night px-5 py-6 text-white">
-        <p className="text-sm opacity-80">
-          Foyer Kay · Africa/Kinshasa · USD/CDF
-        </p>
-        <h1 className="mt-2 text-3xl font-bold">Tableau de bord</h1>
-        <p className="mt-2 max-w-2xl text-sm text-blue-100">
-          Application réelle de démonstration locale: les calculs financiers
-          sont dérivés du grand livre équilibré, sans confondre revenus,
-          transferts, dépenses familiales et épargne.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm opacity-80">
+              {data.householdName ?? "Foyer non initialisé"} · Africa/Kinshasa ·
+              USD/CDF
+            </p>
+            <h1 className="mt-2 text-3xl font-bold">Tableau de bord</h1>
+            <p className="mt-2 max-w-2xl text-sm text-blue-100">
+              Les indicateurs sont lus depuis Supabase et calculés par RPC à
+              partir des écritures validées du foyer connecté.
+            </p>
+          </div>
+          {data.authenticated ? (
+            <form action={signOut}>
+              <button className="rounded-xl border border-white/40 px-3 py-2 text-sm">
+                Déconnexion
+              </button>
+            </form>
+          ) : (
+            <Link
+              className="rounded-xl border border-white/40 px-3 py-2 text-sm"
+              href="/login"
+            >
+              Connexion
+            </Link>
+          )}
+        </div>
       </section>
+
+      {!data.configured && (
+        <section className="px-4 py-4">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+            Configurez Supabase avec `.env.local` pour activer les données
+            réelles.
+          </div>
+        </section>
+      )}
+      {data.configured && data.authenticated && !data.householdName && (
+        <section className="px-4 py-4">
+          <Link
+            href="/onboarding"
+            className="block rounded-2xl border bg-white p-4 font-semibold text-electric"
+          >
+            Créer le premier foyer
+          </Link>
+        </section>
+      )}
+
       <section className="grid gap-3 px-4 py-5 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map(([label, value]) => (
           <article
@@ -51,65 +77,83 @@ export default function Home() {
           </article>
         ))}
       </section>
+
       <section className="px-4">
         <div className="rounded-2xl border bg-white p-4">
           <h2 className="text-xl font-semibold">Ajouter rapidement</h2>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               "Vente",
+              "Entrée",
               "Dépense",
+              "Achat",
               "Transfert",
               "Apport",
+              "Retrait",
               "Épargne",
-              "Achat stock",
             ].map((x) => (
-              <button
+              <Link
                 className="focus-ring rounded-xl border border-slate-300 px-3 py-3 text-left font-medium hover:bg-slate-50"
                 key={x}
+                href="/operations"
               >
                 {x}
-              </button>
+              </Link>
             ))}
           </div>
         </div>
       </section>
+
       <section className="grid gap-4 px-4 py-5 lg:grid-cols-2">
         <div className="rounded-2xl border bg-white p-4">
           <h2 className="text-xl font-semibold">Activités</h2>
-          <ul className="mt-3 space-y-2">
-            {defaultActivities.map((a) => (
-              <li
-                className="flex items-center justify-between rounded-xl bg-slate-50 p-3"
-                key={a.code}
-              >
-                <span>{a.name}</span>
-                <span
-                  className={a.active ? "text-green-700" : "text-amber-700"}
+          {data.activities.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-600">
+              Aucune activité. Lancez l’onboarding pour créer IPTV, Mini UPS,
+              Android TV Box et Billard inactif.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {data.activities.map((a) => (
+                <li
+                  className="flex items-center justify-between rounded-xl bg-slate-50 p-3"
+                  key={a.code}
                 >
-                  {a.active ? "Active" : "Inactive"}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  <span>{a.name}</span>
+                  <span
+                    className={a.active ? "text-green-700" : "text-amber-700"}
+                  >
+                    {a.active ? "Active" : "Inactive"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="rounded-2xl border bg-white p-4">
           <h2 className="text-xl font-semibold">Dernières opérations</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {entries.map((e, index) => (
-              <li
-                className="rounded-xl bg-slate-50 p-3"
-                key={`${e.id}-${index}`}
-              >
-                <span className="font-medium">{e.type}</span>
-                <span className="ml-2 text-green-700">{e.status}</span>
-                <span className="block text-slate-600">
-                  {e.lines.length} lignes équilibrées
-                </span>
-              </li>
-            ))}
-          </ul>
+          {data.operations.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-600">
+              Aucune écriture validée pour cette période.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2 text-sm">
+              {data.operations.map((e) => (
+                <li className="rounded-xl bg-slate-50 p-3" key={e.number}>
+                  <span className="font-medium">
+                    {e.number} · {e.type}
+                  </span>
+                  <span className="ml-2 text-green-700">{e.status}</span>
+                  <span className="block text-slate-600">
+                    {e.line_count} lignes équilibrées
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
+
       <nav
         aria-label="Navigation principale"
         className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t bg-white text-center text-xs shadow-lg"
