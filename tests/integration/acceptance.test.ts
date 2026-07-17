@@ -71,6 +71,11 @@ describe("MVP acceptance scenarios", () => {
     expect(sql).toContain("create function post_journal_entry");
     expect(sql).toContain("create function reverse_journal_entry");
     expect(sql).toContain("prevent_posted_line_changes");
+    expect(sql).toContain("prevent_direct_posted_entry_write");
+    expect(sql).toContain("journal_lines_entry_same_household");
+    expect(sql).toContain("journal_lines_account_same_household");
+    expect(sql).toContain("create policy profile_self on profiles");
+    expect(sql).toContain("member_update_owner");
     expect(sql).toContain("enable row level security");
     expect(sql).toContain("security definer set search_path=public");
     expect(sql).toContain("grant execute on function bootstrap_household");
