@@ -123,6 +123,132 @@ export default async function Page({
                 className="mt-1 w-full rounded-xl border p-3"
               />
             </label>
+
+            <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-700">
+                Champs métier obligatoires selon le type choisi
+              </p>
+              <label className="block text-sm font-medium">
+                Date d’opération
+                <input
+                  name="operation_date"
+                  type="date"
+                  className="mt-1 w-full rounded-xl border p-3"
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                Produit / offre IPTV
+                <select
+                  name="product_id"
+                  className="mt-1 w-full rounded-xl border p-3"
+                >
+                  <option value="">Choisir explicitement un produit</option>
+                  {data.products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Quantité
+                <input
+                  name="quantity"
+                  inputMode="decimal"
+                  placeholder="1"
+                  className="mt-1 w-full rounded-xl border p-3"
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                Vente à régler
+                <select
+                  name="sale_id"
+                  className="mt-1 w-full rounded-xl border p-3"
+                >
+                  <option value="">Choisir une vente ouverte</option>
+                  {data.openSales.map((sale) => (
+                    <option key={sale.id} value={sale.id}>
+                      {sale.number} · {sale.total_source} · {sale.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Échéance crédit
+                <input
+                  name="due_date"
+                  type="date"
+                  className="mt-1 w-full rounded-xl border p-3"
+                />
+              </label>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Compte source / encaissement
+                  <select
+                    name="source_cash_account_id"
+                    className="mt-1 w-full rounded-xl border p-3"
+                  >
+                    <option value="">Choisir le compte source</option>
+                    {data.cashAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} · {account.currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm font-medium">
+                  Compte destination
+                  <select
+                    name="destination_cash_account_id"
+                    className="mt-1 w-full rounded-xl border p-3"
+                  >
+                    <option value="">Choisir le compte destination</option>
+                    {data.cashAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} · {account.currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="block text-sm font-medium">
+                Catégorie de dépense
+                <select
+                  name="category_id"
+                  className="mt-1 w-full rounded-xl border p-3"
+                >
+                  <option value="">Choisir une catégorie</option>
+                  {data.categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name} · {category.type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Objectif d’épargne
+                <select
+                  name="savings_goal_id"
+                  className="mt-1 w-full rounded-xl border p-3"
+                >
+                  <option value="">Choisir un objectif</option>
+                  {data.savingsGoals.map((goal) => (
+                    <option key={goal.id} value={goal.id}>
+                      {goal.name} · {goal.currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Frais de transfert / achat
+                <input
+                  name="fees_source"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  className="mt-1 w-full rounded-xl border p-3"
+                />
+              </label>
+            </div>
             <label className="block text-sm font-medium">
               Description
               <input

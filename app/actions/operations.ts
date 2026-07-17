@@ -23,6 +23,24 @@ const operationSchema = z.object({
   exchange_rate: z.string().regex(/^\d+(\.\d{1,8})?$/),
   description: z.string().trim().min(3).max(160),
   activity_code: z.string().optional(),
+  operation_date: z.string().optional(),
+  product_id: z.string().uuid().optional(),
+  quantity: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/)
+    .optional(),
+  contact_id: z.string().uuid().optional(),
+  supplier_id: z.string().uuid().optional(),
+  sale_id: z.string().uuid().optional(),
+  due_date: z.string().optional(),
+  source_cash_account_id: z.string().uuid().optional(),
+  destination_cash_account_id: z.string().uuid().optional(),
+  category_id: z.string().uuid().optional(),
+  savings_goal_id: z.string().uuid().optional(),
+  fees_source: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/)
+    .optional(),
   idempotency_key: z.string().uuid(),
 });
 
@@ -48,6 +66,21 @@ export async function createQuickOperation(formData: FormData) {
     p_description: parsed.data.description,
     p_activity_code: parsed.data.activity_code || null,
     p_idempotency_key: parsed.data.idempotency_key,
+    p_payload: {
+      operation_date: parsed.data.operation_date || undefined,
+      product_id: parsed.data.product_id || undefined,
+      quantity: parsed.data.quantity || undefined,
+      contact_id: parsed.data.contact_id || undefined,
+      supplier_id: parsed.data.supplier_id || undefined,
+      sale_id: parsed.data.sale_id || undefined,
+      due_date: parsed.data.due_date || undefined,
+      source_cash_account_id: parsed.data.source_cash_account_id || undefined,
+      destination_cash_account_id:
+        parsed.data.destination_cash_account_id || undefined,
+      category_id: parsed.data.category_id || undefined,
+      savings_goal_id: parsed.data.savings_goal_id || undefined,
+      fees_source: parsed.data.fees_source || undefined,
+    },
   });
   if (error) redirect(`/operations?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/");
