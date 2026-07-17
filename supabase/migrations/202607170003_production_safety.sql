@@ -1,6 +1,11 @@
 -- Production safety: verifiable idempotency, tenant-safe stock reads, immutable
 -- posted documents, service sales and complete multi-currency transfer lines.
 
+grant usage on schema public to authenticated;
+grant select,insert,update,delete on all tables in schema public to authenticated;
+alter default privileges in schema public
+  grant select,insert,update,delete on tables to authenticated;
+
 alter table journal_entries
   add column if not exists operation_payload jsonb not null default '{}'::jsonb;
 
