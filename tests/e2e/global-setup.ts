@@ -10,17 +10,34 @@ export default async function globalSetup() {
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: users, error: listError } = await admin.auth.admin.listUsers();
-  if (listError) throw listError;
-  const existing = users.users.find((user) => user.email === email);
-  if (existing) {
-    const { error } = await admin.auth.admin.deleteUser(existing.id);
-    if (error) throw error;
+
+  let healthError: unknown;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      const response = await fetch(`${url}/auth/v1/health`);
+      if (response.ok) {
+        healthError = undefined;
+        break;
+      }
+      healthError = new Error(`Auth health returned ${response.status}`);
+    } catch (error) {
+      healthError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
-  const { error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (error) throw error;
+  if (healthError) throw healthError;
+
+  let createError: Error | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (!error || /already.+registered|already.+exists/i.test(error.message))
+      return;
+    createError = error;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw createError ?? new Error("Unable to create the E2E user");
 }
