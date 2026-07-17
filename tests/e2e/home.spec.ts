@@ -43,18 +43,18 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await expect(page.getByText("Foyer E2E", { exact: false })).toBeVisible();
 
   await page.getByRole("link", { name: "Opérations" }).click();
-  await page.getByLabel("Type d’opération").selectOption("cash_sale");
-  await page.getByLabel("Activité", { exact: true }).selectOption("IPTV");
-  await page.getByLabel("Montant source").fill("12");
-  await page.getByLabel("Taux vers USD").fill("1");
-  await page.getByLabel("Produit / offre IPTV").selectOption({
+  await page.locator('select[name="operation_type"]').selectOption("cash_sale");
+  await page.locator('select[name="activity_code"]').selectOption("IPTV");
+  await page.locator('input[name="amount"]').fill("12");
+  await page.locator('input[name="exchange_rate"]').fill("1");
+  await page.locator('select[name="product_id"]').selectOption({
     label: "Offre IPTV standard",
   });
-  await page.getByLabel("Quantité").fill("1");
-  await page.getByLabel("Compte source / encaissement").selectOption({
+  await page.locator('input[name="quantity"]').fill("1");
+  await page.locator('select[name="source_cash_account_id"]').selectOption({
     label: "Caisse USD · USD",
   });
-  await page.getByLabel("Description").fill("Abonnement IPTV E2E");
+  await page.locator('input[name="description"]').fill("Abonnement IPTV E2E");
   await page.getByRole("button", { name: "Valider l’opération" }).click();
   await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
 
