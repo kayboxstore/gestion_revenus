@@ -44,7 +44,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
 
   await page.getByRole("link", { name: "Opérations" }).click();
   await page.getByLabel("Type d’opération").selectOption("cash_sale");
-  await page.getByLabel("Activité").selectOption("IPTV");
+  await page.getByLabel("Activité", { exact: true }).selectOption("IPTV");
   await page.getByLabel("Montant source").fill("12");
   await page.getByLabel("Taux vers USD").fill("1");
   await page.getByLabel("Produit / offre IPTV").selectOption({
