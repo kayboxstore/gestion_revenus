@@ -420,14 +420,21 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         payload: { source_cash_account_id: refs.cashUsd },
       }),
     );
-    await asUser(operatorId, (client) =>
-      expect(
-        client.query(
-          "update activities set active=false where household_id=$1 and code='IPTV'",
-          [refs.householdId],
-        ),
-      ).rejects.toThrow(/row-level security/),
+    const unauthorizedUpdate = await asUser(operatorId, (client) =>
+      client.query(
+        "update activities set active=false where household_id=$1 and code='IPTV'",
+        [refs.householdId],
+      ),
     );
+    expect(unauthorizedUpdate.rowCount).toBe(0);
+    const unchangedActivity = await asUser(ownerId, (client) =>
+      one<{ active: boolean }>(
+        client,
+        "select active from activities where household_id=$1 and code='IPTV'",
+        [refs.householdId],
+      ),
+    );
+    expect(unchangedActivity.active).toBe(true);
     await asUser(operatorId, (client) =>
       expect(
         client.query(
