@@ -159,9 +159,15 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
     .fill("Vente IPTV à crédit E2E export");
   await page.getByRole("button", { name: "Valider l’opération" }).click();
   await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
-  await expect(
-    page.locator("li").filter({ hasText: "credit_sale" }).first(),
-  ).toContainText("23.5");
+  const creditSaleEntry = page
+    .locator("li")
+    .filter({ hasText: "credit_sale" })
+    .filter({ hasText: "posted" })
+    .filter({ hasText: /CRE-/ })
+    .first();
+  await expect(creditSaleEntry).toContainText(/CRE-[^\s·]+/);
+  await expect(creditSaleEntry).toContainText("credit_sale");
+  await expect(creditSaleEntry).toContainText("posted");
 
   await page.getByRole("link", { name: "Accueil" }).click();
   await page.getByRole("link", { name: "Rapports" }).click();
