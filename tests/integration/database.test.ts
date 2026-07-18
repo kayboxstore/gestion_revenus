@@ -537,7 +537,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         "select amount::text from get_receivables_report($1) where label=(select number from sales where id=$2)",
         [refs.householdId, sale.id],
       );
-      expect(receivable.amount).toBe("40.00000000");
+      expect(receivable.amount).toBe("40.0000");
 
       const savings = await record(client, {
         type: "savings_contribution",
@@ -668,11 +668,14 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         [refs.householdId, protectedSale.number],
       );
       expect(protectedDue.amount).toBe("60.0000");
+      await client.query("savepoint expected_sale_reversal_error");
       await expect(
         client.query("select reverse_journal_entry($1,'Vente avec paiement')", [
           protectedSaleEntry.id,
         ]),
       ).rejects.toThrow(/annulez d'abord les paiements actifs/);
+      await client.query("rollback to savepoint expected_sale_reversal_error");
+      await client.query("release savepoint expected_sale_reversal_error");
       const protectedState = await one<{
         sale_status: string;
         payment_status: string;
@@ -833,16 +836,23 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     });
 
     await asAnon(async (client) => {
+      await client.query("savepoint expected_anon_dashboard_error");
       await expect(
         client.query("select * from get_dashboard_kpis($1,null,null,null)", [
           refs.householdId,
         ]),
       ).rejects.toThrow(/permission denied/);
+      await client.query("rollback to savepoint expected_anon_dashboard_error");
+      await client.query("release savepoint expected_anon_dashboard_error");
+
+      await client.query("savepoint expected_anon_balances_error");
       await expect(
         client.query("select * from get_account_balances($1)", [
           refs.householdId,
         ]),
       ).rejects.toThrow(/permission denied/);
+      await client.query("rollback to savepoint expected_anon_balances_error");
+      await client.query("release savepoint expected_anon_balances_error");
     });
   });
 
