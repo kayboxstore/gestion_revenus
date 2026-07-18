@@ -56,6 +56,17 @@ begin
   for sale_rec in
     select * from sales where household_id=original.household_id and journal_entry_id=original.id for update
   loop
+    if exists(
+      select 1
+      from payments p
+      join journal_entries pe on pe.id=p.journal_entry_id
+      where p.household_id=original.household_id
+        and p.sale_id=sale_rec.id
+        and p.status='posted'
+        and pe.status='posted'
+    ) then
+      raise exception 'annulez d''abord les paiements actifs de cette vente';
+    end if;
     update sales set status='cancelled'
     where household_id=original.household_id and id=sale_rec.id;
   end loop;

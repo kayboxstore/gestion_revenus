@@ -69,7 +69,7 @@ $$;
 
 create or replace function get_receivables_report(p_household_id uuid) returns table(label text, amount numeric, detail text) language sql stable security definer set search_path=public as $$
   select s.number,
-         greatest(s.total_base-coalesce(sum(p.balance_applied_source*p.exchange_rate) filter(where p.status='posted' and pe.status='posted'),0),0),
+         greatest(s.total_base-coalesce(sum(p.balance_applied_source*p.exchange_rate) filter(where p.status='posted' and pe.status='posted'),0),0)::numeric(20,4),
          coalesce(s.status::text,'créance')
   from sales s
   left join payments p on p.sale_id=s.id and p.household_id=s.household_id
@@ -101,7 +101,8 @@ grant execute on function get_activity_margins(uuid,date,date,uuid), get_expense
 -- excluding drafts. Reversed originals stay in the ledger aggregates together
 -- with their posted inverse entry; document projections above are updated by
 -- reverse_journal_entry and remain filtered to active posted business rows.
-create or replace function get_dashboard_kpis(p_household_id uuid)
+drop function if exists get_dashboard_kpis(uuid);
+create or replace function get_dashboard_kpis(p_household_id uuid, p_from date default null, p_to date default null, p_activity_id uuid default null)
 returns table(revenue numeric,gross_profit numeric,net_profit numeric,family_expenses numeric,savings numeric,cash numeric)
 language sql stable security definer set search_path=public as $$
   select
@@ -116,7 +117,10 @@ language sql stable security definer set search_path=public as $$
   join ledger_accounts a on a.id=l.ledger_account_id
   where l.household_id=p_household_id
     and is_household_member(p_household_id)
-    and e.status in ('posted','reversed');
+    and e.status in ('posted','reversed')
+    and (p_from is null or e.entry_date >= p_from)
+    and (p_to is null or e.entry_date <= p_to)
+    and (p_activity_id is null or e.activity_id=p_activity_id);
 $$;
-revoke all on function get_dashboard_kpis(uuid) from public;
-grant execute on function get_dashboard_kpis(uuid) to authenticated;
+revoke all on function get_dashboard_kpis(uuid,date,date,uuid) from public;
+grant execute on function get_dashboard_kpis(uuid,date,date,uuid) to authenticated;

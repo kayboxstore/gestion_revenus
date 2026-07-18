@@ -593,7 +593,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     await asUser(ownerId, async (client) => {
       const kpiBefore = await one<{ revenue: string; cash: string }>(
         client,
-        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        "select revenue::text,cash::text from get_dashboard_kpis($1,null,null,null)",
         [refs.householdId],
       );
       const contribution = await record(client, {
@@ -603,7 +603,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       });
       let kpis = await one<{ revenue: string; cash: string }>(
         client,
-        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        "select revenue::text,cash::text from get_dashboard_kpis($1,null,null,null)",
         [refs.householdId],
       );
       expect(kpis.revenue).toBe(kpiBefore.revenue);
@@ -613,7 +613,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       ]);
       kpis = await one<{ revenue: string; cash: string }>(
         client,
-        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        "select revenue::text,cash::text from get_dashboard_kpis($1,null,null,null)",
         [refs.householdId],
       );
       expect(kpis.revenue).toBe(kpiBefore.revenue);
@@ -643,6 +643,53 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       expect(cancelledReceivable.status).toBe("cancelled");
       expect(cancelledReceivable.count).toBe("0");
 
+      const protectedSaleEntry = await record(client, {
+        type: "credit_sale",
+        amount: "100",
+        activity: "IPTV",
+        payload: { product_id: refs.iptvProduct, quantity: "1" },
+      });
+      const protectedSale = await one<{ id: string; number: string }>(
+        client,
+        "select id,number from sales where journal_entry_id=$1",
+        [protectedSaleEntry.id],
+      );
+      await record(client, {
+        type: "payment",
+        amount: "40",
+        payload: {
+          sale_id: protectedSale.id,
+          source_cash_account_id: refs.cashUsd,
+        },
+      });
+      const protectedDue = await one<{ amount: string }>(
+        client,
+        "select amount::text from get_receivables_report($1) where label=$2",
+        [refs.householdId, protectedSale.number],
+      );
+      expect(protectedDue.amount).toBe("60.0000");
+      await expect(
+        client.query("select reverse_journal_entry($1,'Vente avec paiement')", [
+          protectedSaleEntry.id,
+        ]),
+      ).rejects.toThrow(/annulez d'abord les paiements actifs/);
+      const protectedState = await one<{
+        sale_status: string;
+        payment_status: string;
+        due: string;
+      }>(
+        client,
+        `select s.status::text as sale_status, p.status::text as payment_status,
+          (select amount::text from get_receivables_report($1) where label=s.number) as due
+         from sales s join payments p on p.sale_id=s.id where s.id=$2`,
+        [refs.householdId, protectedSale.id],
+      );
+      expect(protectedState).toEqual({
+        sale_status: "partially_paid",
+        payment_status: "posted",
+        due: "60.0000",
+      });
+
       const paidSaleEntry = await record(client, {
         type: "credit_sale",
         amount: "90",
@@ -670,7 +717,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         [refs.householdId, paidSale.id],
       );
       expect(restoredSale.status).toBe("confirmed");
-      expect(restoredSale.due).toBe("90.00000000");
+      expect(restoredSale.due).toBe("90.0000");
 
       const stockBefore = await one<{ quantity: string }>(
         client,
@@ -754,7 +801,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       const before = await one<{ cash: string; caisse: string }>(
         client,
         `select
-          (select cash::text from get_dashboard_kpis($1)) as cash,
+          (select cash::text from get_dashboard_kpis($1,null,null,null)) as cash,
           (select amount::text from get_account_balances($1) where label='Caisse USD') as caisse`,
         [refs.householdId],
       );
@@ -778,7 +825,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       const after = await one<{ cash: string; caisse: string }>(
         client,
         `select
-          (select cash::text from get_dashboard_kpis($1)) as cash,
+          (select cash::text from get_dashboard_kpis($1,null,null,null)) as cash,
           (select amount::text from get_account_balances($1) where label='Caisse USD') as caisse`,
         [refs.householdId],
       );
@@ -787,7 +834,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
 
     await asAnon(async (client) => {
       await expect(
-        client.query("select * from get_dashboard_kpis($1)", [
+        client.query("select * from get_dashboard_kpis($1,null,null,null)", [
           refs.householdId,
         ]),
       ).rejects.toThrow(/permission denied/);
