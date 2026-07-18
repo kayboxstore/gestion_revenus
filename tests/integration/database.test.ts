@@ -85,6 +85,33 @@ async function one<T extends QueryResultRow>(
   return result.rows[0];
 }
 
+function decimalToUnits(value: string): bigint {
+  const [whole, fraction = ""] = value.split(".");
+  return BigInt(`${whole}${fraction.padEnd(4, "0").slice(0, 4)}`);
+}
+
+function decimalDelta(after: string, before: string): string {
+  const delta = decimalToUnits(after) - decimalToUnits(before);
+  const sign = delta < 0n ? "-" : "";
+  const absolute = delta < 0n ? -delta : delta;
+  const whole = absolute / 10000n;
+  const fraction = (absolute % 10000n).toString().padStart(4, "0");
+  return `${sign}${whole}.${fraction}`;
+}
+
+async function accountBalance(
+  client: PoolClient,
+  householdId: string,
+  label: string,
+): Promise<string> {
+  const row = await one<{ amount: string }>(
+    client,
+    "select amount::text from get_account_balances($1) where label=$2",
+    [householdId, label],
+  );
+  return row.amount;
+}
+
 async function record(
   client: PoolClient,
   input: {
@@ -341,6 +368,11 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
           source_cash_account_id: refs.cashUsd,
         },
       });
+      const mpesaBeforeTransfer = await accountBalance(
+        client,
+        refs.householdId,
+        "M-Pesa USD",
+      );
       await record(client, {
         type: "transfer",
         amount: "10",
@@ -349,6 +381,14 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
           destination_cash_account_id: refs.mpesaUsd,
         },
       });
+      const mpesaAfterTransfer = await accountBalance(
+        client,
+        refs.householdId,
+        "M-Pesa USD",
+      );
+      expect(decimalDelta(mpesaAfterTransfer, mpesaBeforeTransfer)).toBe(
+        "10.0000",
+      );
       await record(client, {
         type: "savings_contribution",
         amount: "5",
@@ -375,6 +415,11 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
 
   it("preserves both currencies and books the FX difference on a transfer", async () => {
     await asUser(ownerId, async (client) => {
+      const mpesaBeforeTransfer = await accountBalance(
+        client,
+        refs.householdId,
+        "M-Pesa USD",
+      );
       const entry = await record(client, {
         type: "transfer",
         amount: "100000",
@@ -405,6 +450,14 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         { currency: "USD", source_amount: "39.0000" },
         { currency: "CDF", source_amount: "100000.0000" },
       ]);
+      const mpesaAfterTransfer = await accountBalance(
+        client,
+        refs.householdId,
+        "M-Pesa USD",
+      );
+      expect(decimalDelta(mpesaAfterTransfer, mpesaBeforeTransfer)).toBe(
+        "39.0000",
+      );
     });
   });
 
@@ -564,11 +617,38 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       );
       expect(progress.amount).toBe("5.0000");
 
-      await client.query(
+      const balancesBeforeDraft = await client.query<{
+        label: string;
+        amount: string;
+      }>(
+        "select label,amount::text from get_account_balances($1) where label in ('Caisse USD','M-Pesa USD') order by label",
+        [refs.householdId],
+      );
+      const beforeDraftByLabel = Object.fromEntries(
+        balancesBeforeDraft.rows.map((row) => [row.label, row.amount]),
+      );
+      const draft = await one<{ id: string }>(
+        client,
         `insert into journal_entries(
           household_id,number,type,entry_date,status,created_by
-        ) values($1,$2,'manual',current_date,'draft',$3)`,
+        ) values($1,$2,'manual',current_date,'draft',$3) returning id`,
         [refs.householdId, `DRAFT-${randomUUID()}`, ownerId],
+      );
+      await client.query(
+        `insert into journal_lines(
+          journal_entry_id,household_id,ledger_account_id,cash_account_id,
+          debit_base,credit_base,currency,source_amount,exchange_rate
+        )
+        select $1,$2,ca.ledger_account_id,ca.id,17,0,ca.currency,17,1
+        from cash_accounts ca where ca.id=$3`,
+        [draft.id, refs.householdId, refs.mpesaUsd],
+      );
+      await client.query(
+        `insert into journal_lines(
+          journal_entry_id,household_id,ledger_account_id,
+          debit_base,credit_base,currency,source_amount,exchange_rate
+        ) values($1,$2,(select id from ledger_accounts where household_id=$2 and code='equity'),0,17,'USD',17,1)`,
+        [draft.id, refs.householdId],
       );
       const balances = await client.query<{ label: string; amount: string }>(
         "select label,amount::text from get_account_balances($1) where label in ('Caisse USD','M-Pesa USD') order by label",
@@ -577,8 +657,8 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       const byLabel = Object.fromEntries(
         balances.rows.map((row) => [row.label, row.amount]),
       );
-      expect(byLabel["M-Pesa USD"]).toBe("10.0000");
-      expect(Number(byLabel["Caisse USD"])).toBeLessThan(200);
+      expect(byLabel["M-Pesa USD"]).toBe(beforeDraftByLabel["M-Pesa USD"]);
+      expect(byLabel["Caisse USD"]).toBe(beforeDraftByLabel["Caisse USD"]);
 
       await expect(
         client.query("select owner_manage_member($1,$2,'reader','active')", [
