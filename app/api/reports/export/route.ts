@@ -1,8 +1,13 @@
+import Decimal from "decimal.js";
 import { NextRequest } from "next/server";
 import { getDashboardData } from "@/lib/dashboard/queries";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function decimalAmount(value: string) {
+  return new Decimal(value).toFixed(4);
 }
 
 export async function GET(request: NextRequest) {
@@ -21,7 +26,12 @@ export async function GET(request: NextRequest) {
     rows: { label: string; amount: string; detail?: string }[],
   ) => {
     for (const row of rows)
-      lines.push([section, row.label, row.amount, row.detail ?? ""]);
+      lines.push([
+        section,
+        row.label,
+        decimalAmount(row.amount),
+        row.detail ?? "",
+      ]);
   };
   addRows("Marge par activité", data.reports.activityMargins);
   addRows("Dépenses par catégorie", data.reports.expensesByCategory);

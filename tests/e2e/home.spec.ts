@@ -185,5 +185,5 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   expect(content).toContain('"Section","Libellé","Montant","Détail"');
   expect(content).toContain('"Marge par activité"');
   expect(content).toContain('"Créances"');
-  expect(content).toMatch(/"Créances","S-[^"]+","23\.5000","confirmed"/);
+  expect(content).toMatch(/"Créances","CRE-[^"]+","23\.5000","confirmed"/);
 });
