@@ -142,6 +142,28 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   await expect(page.getByText("Invitation créée.")).toBeVisible();
 
   await page.getByRole("link", { name: "Accueil" }).click();
+  await page.getByRole("link", { name: "Opérations" }).click();
+  await page
+    .locator('select[name="operation_type"]')
+    .selectOption("credit_sale");
+  await page.locator('select[name="activity_code"]').selectOption("IPTV");
+  await page.locator('input[name="amount"]').fill("23.50");
+  await page.locator('input[name="exchange_rate"]').fill("1");
+  await page.locator('select[name="product_id"]').selectOption({
+    label: "Offre IPTV standard",
+  });
+  await page.locator('input[name="quantity"]').fill("1");
+  await page.locator('input[name="due_date"]').fill("2026-12-31");
+  await page
+    .locator('input[name="description"]')
+    .fill("Vente IPTV à crédit E2E export");
+  await page.getByRole("button", { name: "Valider l’opération" }).click();
+  await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
+  await expect(
+    page.locator("li").filter({ hasText: "credit_sale" }).first(),
+  ).toContainText("23.5");
+
+  await page.getByRole("link", { name: "Accueil" }).click();
   await page.getByRole("link", { name: "Rapports" }).click();
   await expect(page.getByRole("heading", { name: "Rapports" })).toBeVisible();
   await expect(page.getByText("Marge par activité")).toBeVisible();
@@ -157,4 +179,5 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   expect(content).toContain('"Section","Libellé","Montant","Détail"');
   expect(content).toContain('"Marge par activité"');
   expect(content).toContain('"Créances"');
+  expect(content).toMatch(/"Créances","S-[^"]+","23\.5000","confirmed"/);
 });
