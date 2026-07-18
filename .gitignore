@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+.env*.local
+playwright-report
+test-results
+blob-report
+coverage
+captures
+*.webm
+*.zip
+tsconfig.tsbuildinfo
+.DS_Store

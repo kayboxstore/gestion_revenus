@@ -1,39 +1,51 @@
 # Gestion des revenus — Famille Kay
 
-Application web mobile-first pour piloter les revenus, les dépenses, la trésorerie, l’épargne et les stocks d’une petite famille.
+Application Next.js/Supabase mobile-first pour gérer revenus, dépenses, achats, transferts, épargne, stock et rentabilité d'un foyer sans confondre flux de trésorerie et revenu.
 
-## Activités suivies
+## Démarrage local
 
-- Vente IPTV
-- Vente de Mini UPS
-- Vente d’Android TV Box
-- Table de billard, désactivée par défaut et activable au lancement de l’activité
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
 
-## Objectif
+Les données de production ne sont pas codées en dur : l'accueil lit la session Supabase SSR puis appelle `get_dashboard_kpis` pour dériver les indicateurs depuis les écritures validées du foyer.
 
-Donner à la famille une vue fiable de l’argent réellement disponible et de la rentabilité de chaque activité, sans confondre chiffre d’affaires, bénéfice, transferts, apports familiaux et épargne.
+## Base Supabase
 
-## Produit attendu
+Appliquer les migrations versionnées :
 
-- interface française, responsive et installable comme PWA ;
-- tableau de bord consolidé et vues par activité ;
-- ventes, autres entrées, dépenses, achats et retraits familiaux ;
-- comptes de trésorerie : caisse, banque, M-Pesa, Airtel Money et épargne ;
-- gestion USD/CDF avec taux de conversion historisé ;
-- stock pour Mini UPS et Android TV Box ;
-- suivi des clients et échéances IPTV ;
-- objectifs et contributions d’épargne ;
-- budgets, rapports et exports ;
-- rôles familiaux, journal d’audit et règles de sécurité par foyer.
+```bash
+supabase start
+supabase db reset
+```
 
-## Documentation de référence
+La migration crée le bootstrap atomique `bootstrap_household`, les tables du modèle logique, les politiques RLS par foyer et les RPC d'écriture/annulation comptable.
+
+Les tests d'intégration se connectent réellement à PostgreSQL via `TEST_DATABASE_URL`. Ils appellent les RPC sous le rôle Supabase `authenticated` et prouvent le coût moyen, l'équilibre des écritures, l'idempotence, l'annulation, les droits Lecteur et l'isolation entre foyers. La CI démarre Supabase local avant de les exécuter.
+
+## Validation
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run test:integration
+npm run build
+npm run test:e2e
+```
+
+Sans Supabase local, les scénarios PostgreSQL et le parcours E2E authentifié sont explicitement ignorés ; ils ne sont jamais remplacés par une lecture textuelle des migrations.
+
+## Documentation
 
 - [Spécification produit](docs/PRODUCT_SPEC.md)
 - [Architecture technique](docs/ARCHITECTURE.md)
 - [Modèle de données](docs/DATA_MODEL.md)
 - [Prompt maître Codex Web](docs/CODEX_WEB_MASTER_PROMPT.md)
+- [Déploiement](docs/DEPLOYMENT.md)
+- [Sécurité](docs/SECURITY.md)
+- [Guide utilisateur](docs/USER_GUIDE.md)
 - [Règles permanentes pour les agents](AGENTS.md)
-
-## État du dépôt
-
-Le dépôt contient d’abord le contrat produit et technique. La première mission Codex doit construire l’application complète conformément aux documents ci-dessus, valider les tests et ouvrir une pull request.
