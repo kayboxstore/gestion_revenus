@@ -487,6 +487,85 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     });
   });
 
+  it("reports posted account balances, remaining receivables, savings progress, and owner safety", async () => {
+    await asUser(ownerId, async (client) => {
+      const saleEntry = await record(client, {
+        type: "credit_sale",
+        amount: "100",
+        activity: "IPTV",
+        payload: {
+          product_id: refs.iptvProduct,
+          quantity: "1",
+          due_date: "2026-08-01",
+        },
+      });
+      const sale = await one<{ id: string }>(
+        client,
+        "select id from sales where journal_entry_id=$1",
+        [saleEntry.id],
+      );
+      await record(client, {
+        type: "payment",
+        amount: "60",
+        payload: { sale_id: sale.id, source_cash_account_id: refs.cashUsd },
+      });
+      const receivable = await one<{ amount: string }>(
+        client,
+        "select amount::text from get_receivables_report($1) where label=(select number from sales where id=$2)",
+        [refs.householdId, sale.id],
+      );
+      expect(receivable.amount).toBe("40.00000000");
+
+      const savings = await record(client, {
+        type: "savings_contribution",
+        amount: "7",
+        payload: {
+          source_cash_account_id: refs.cashUsd,
+          destination_cash_account_id: refs.savingsUsd,
+          savings_goal_id: refs.savingsGoal,
+        },
+      });
+      let progress = await one<{ amount: string }>(
+        client,
+        "select amount::text from get_savings_progress($1) where label='Urgences'",
+        [refs.householdId],
+      );
+      expect(progress.amount).toBe("12.0000");
+      await client.query("select reverse_journal_entry($1,'Correction test')", [
+        savings.id,
+      ]);
+      progress = await one<{ amount: string }>(
+        client,
+        "select amount::text from get_savings_progress($1) where label='Urgences'",
+        [refs.householdId],
+      );
+      expect(progress.amount).toBe("5.0000");
+
+      await client.query(
+        `insert into journal_entries(
+          household_id,number,type,entry_date,status,created_by
+        ) values($1,$2,'manual',current_date,'draft',$3)`,
+        [refs.householdId, `DRAFT-${randomUUID()}`, ownerId],
+      );
+      const balances = await client.query<{ label: string; amount: string }>(
+        "select label,amount::text from get_account_balances($1) where label in ('Caisse USD','M-Pesa USD') order by label",
+        [refs.householdId],
+      );
+      const byLabel = Object.fromEntries(
+        balances.rows.map((row) => [row.label, row.amount]),
+      );
+      expect(byLabel["M-Pesa USD"]).toBe("10.0000");
+      expect(Number(byLabel["Caisse USD"])).toBeLessThan(200);
+
+      await expect(
+        client.query("select owner_manage_member($1,$2,'reader','active')", [
+          refs.householdId,
+          ownerId,
+        ]),
+      ).rejects.toThrow(/at least one active owner/);
+    });
+  });
+
   it("rejects direct posted journal and document writes", async () => {
     await asUser(ownerId, async (client) => {
       await expect(

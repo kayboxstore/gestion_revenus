@@ -6,6 +6,12 @@ begin
   if p_user_id = auth.uid() and p_status <> 'active' then raise exception 'owner cannot deactivate themselves'; end if;
   update household_members set role=p_role, status=p_status where household_id=p_household_id and user_id=p_user_id;
   if not found then raise exception 'member not found'; end if;
+  if not exists(
+    select 1 from household_members
+    where household_id=p_household_id and role='owner' and status='active'
+  ) then
+    raise exception 'household must keep at least one active owner';
+  end if;
   insert into audit_logs(household_id,actor_id,action,entity,entity_id,metadata)
   values(p_household_id,auth.uid(),'manage_member','household_member',p_user_id,jsonb_build_object('role',p_role,'status',p_status));
 end $$;
@@ -49,8 +55,12 @@ returns table(label text, amount numeric, detail text) language sql stable secur
 $$;
 
 create or replace function get_account_balances(p_household_id uuid) returns table(label text, amount numeric, detail text) language sql stable security definer set search_path=public as $$
-  select ca.name, coalesce(sum(l.debit_base-l.credit_base),0), ca.currency from cash_accounts ca left join ledger_accounts la on la.id=ca.ledger_account_id left join journal_lines l on l.ledger_account_id=la.id and l.household_id=ca.household_id left join journal_entries e on e.id=l.journal_entry_id and e.status='posted'
-  where ca.household_id=p_household_id and is_household_member(p_household_id) group by ca.name, ca.currency order by ca.name;
+  select ca.name, coalesce(sum(l.debit_base-l.credit_base) filter(where e.id is not null),0), ca.currency
+  from cash_accounts ca
+  left join journal_lines l on l.cash_account_id=ca.id and l.household_id=ca.household_id
+  left join journal_entries e on e.id=l.journal_entry_id and e.status='posted'
+  where ca.household_id=p_household_id and is_household_member(p_household_id)
+  group by ca.name, ca.currency order by ca.name;
 $$;
 
 create or replace function get_stock_report(p_household_id uuid) returns table(label text, amount numeric, detail text) language sql stable security definer set search_path=public as $$
@@ -58,14 +68,31 @@ create or replace function get_stock_report(p_household_id uuid) returns table(l
 $$;
 
 create or replace function get_receivables_report(p_household_id uuid) returns table(label text, amount numeric, detail text) language sql stable security definer set search_path=public as $$
-  select number, total_base, coalesce(status::text,'créance') from sales where household_id=p_household_id and is_household_member(p_household_id) and status in ('confirmed','partially_paid','overdue') order by due_date nulls last, sale_date desc;
+  select s.number,
+         greatest(s.total_base-coalesce(sum(p.balance_applied_source*p.exchange_rate) filter(where p.status='posted' and pe.status='posted'),0),0),
+         coalesce(s.status::text,'créance')
+  from sales s
+  left join payments p on p.sale_id=s.id and p.household_id=s.household_id
+  left join journal_entries pe on pe.id=p.journal_entry_id
+  where s.household_id=p_household_id and is_household_member(p_household_id) and s.status in ('confirmed','partially_paid','overdue')
+  group by s.id,s.number,s.total_base,s.status,s.due_date,s.sale_date
+  having greatest(s.total_base-coalesce(sum(p.balance_applied_source*p.exchange_rate) filter(where p.status='posted' and pe.status='posted'),0),0) > 0
+  order by s.due_date nulls last, s.sale_date desc;
 $$;
 
 create or replace function get_savings_progress(p_household_id uuid) returns table(label text, amount numeric, detail text) language sql stable security definer set search_path=public as $$
-  select g.name, coalesce(sum(c.amount_source),0), 'cible '||g.target_amount::text||' '||g.currency from savings_goals g left join savings_contributions c on c.savings_goal_id=g.id where g.household_id=p_household_id and is_household_member(p_household_id) group by g.name,g.target_amount,g.currency order by g.priority;
+  select g.name,
+         coalesce(sum(c.amount_source) filter(where e.status='posted'),0),
+         'cible '||g.target_amount::text||' '||g.currency
+  from savings_goals g
+  left join savings_contributions c on c.savings_goal_id=g.id and c.household_id=g.household_id
+  left join journal_entries e on e.id=c.journal_entry_id
+  where g.household_id=p_household_id and is_household_member(p_household_id)
+  group by g.name,g.target_amount,g.currency,g.priority order by g.priority;
 $$;
 
 revoke all on function owner_manage_member(uuid,uuid,household_role,text) from public; grant execute on function owner_manage_member(uuid,uuid,household_role,text) to authenticated;
 revoke all on function owner_create_invitation(uuid,text,household_role) from public; grant execute on function owner_create_invitation(uuid,text,household_role) to authenticated;
 revoke all on function owner_cancel_invitation(uuid) from public; grant execute on function owner_cancel_invitation(uuid) to authenticated;
+revoke all on function get_activity_margins(uuid,date,date,uuid), get_expenses_by_category(uuid,date,date,uuid), get_account_balances(uuid), get_stock_report(uuid), get_receivables_report(uuid), get_savings_progress(uuid) from public;
 grant execute on function get_activity_margins(uuid,date,date,uuid), get_expenses_by_category(uuid,date,date,uuid), get_account_balances(uuid), get_stock_report(uuid), get_receivables_report(uuid), get_savings_progress(uuid) to authenticated;

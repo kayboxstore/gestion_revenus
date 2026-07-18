@@ -212,12 +212,34 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
               ))}
             </select>
           </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm font-medium">
+              Montant reçu
+              <input
+                name="destination_amount"
+                inputMode="decimal"
+                placeholder="Même montant"
+                className="mt-1 w-full rounded-xl border p-3"
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Devise reçue
+              <select
+                name="destination_currency"
+                className="mt-1 w-full rounded-xl border p-3"
+              >
+                <option value="">Même devise</option>
+                <option>USD</option>
+                <option>CDF</option>
+              </select>
+            </label>
+          </div>
           <label className="block text-sm font-medium">
-            Montant reçu
+            Taux destination vers USD
             <input
-              name="destination_amount"
+              name="destination_exchange_rate"
               inputMode="decimal"
-              placeholder="Même montant"
+              placeholder="Même taux"
               className="mt-1 w-full rounded-xl border p-3"
             />
           </label>

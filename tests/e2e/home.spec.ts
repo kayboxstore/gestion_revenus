@@ -147,7 +147,14 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   await expect(page.getByText("Marge par activité")).toBeVisible();
   await expect(page.getByText("Dépenses par catégorie")).toBeVisible();
   await expect(page.getByText("Créances clients")).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Exporter CSV côté serveur" }),
-  ).toHaveAttribute("href", /\/api\/reports\/export/);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Exporter CSV côté serveur" }).click();
+  const download = await downloadPromise;
+  const csv = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of csv!) chunks.push(Buffer.from(chunk));
+  const content = Buffer.concat(chunks).toString("utf8");
+  expect(content).toContain('"Section","Libellé","Montant","Détail"');
+  expect(content).toContain('"Marge par activité"');
+  expect(content).toContain('"Créances"');
 });
