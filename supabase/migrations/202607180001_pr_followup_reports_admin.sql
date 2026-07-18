@@ -43,7 +43,7 @@ returns table(label text, amount numeric, detail text) language sql stable secur
   select coalesce(a.name,'Sans activité'), coalesce(sum(case when la.account_type in ('income','cogs','operating_expense') then l.credit_base-l.debit_base else 0 end),0),
          'marge et résultat par activité'
   from journal_lines l join journal_entries e on e.id=l.journal_entry_id join ledger_accounts la on la.id=l.ledger_account_id left join activities a on a.id=e.activity_id
-  where l.household_id=p_household_id and is_household_member(p_household_id) and e.status='posted' and (p_from is null or e.entry_date>=p_from) and (p_to is null or e.entry_date<=p_to) and (p_activity_id is null or e.activity_id=p_activity_id)
+  where l.household_id=p_household_id and is_household_member(p_household_id) and e.status in ('posted','reversed') and (p_from is null or e.entry_date>=p_from) and (p_to is null or e.entry_date<=p_to) and (p_activity_id is null or e.activity_id=p_activity_id)
   group by a.name order by 2 desc;
 $$;
 
@@ -58,7 +58,7 @@ create or replace function get_account_balances(p_household_id uuid) returns tab
   select ca.name, coalesce(sum(l.debit_base-l.credit_base) filter(where e.id is not null),0), ca.currency
   from cash_accounts ca
   left join journal_lines l on l.cash_account_id=ca.id and l.household_id=ca.household_id
-  left join journal_entries e on e.id=l.journal_entry_id and e.status='posted'
+  left join journal_entries e on e.id=l.journal_entry_id and e.status in ('posted','reversed')
   where ca.household_id=p_household_id and is_household_member(p_household_id)
   group by ca.name, ca.currency order by ca.name;
 $$;
@@ -96,3 +96,27 @@ revoke all on function owner_create_invitation(uuid,text,household_role) from pu
 revoke all on function owner_cancel_invitation(uuid) from public; grant execute on function owner_cancel_invitation(uuid) to authenticated;
 revoke all on function get_activity_margins(uuid,date,date,uuid), get_expenses_by_category(uuid,date,date,uuid), get_account_balances(uuid), get_stock_report(uuid), get_receivables_report(uuid), get_savings_progress(uuid) from public;
 grant execute on function get_activity_margins(uuid,date,date,uuid), get_expenses_by_category(uuid,date,date,uuid), get_account_balances(uuid), get_stock_report(uuid), get_receivables_report(uuid), get_savings_progress(uuid) to authenticated;
+
+-- Reversal reports must neutralize original+inverse exactly while still
+-- excluding drafts. Reversed originals stay in the ledger aggregates together
+-- with their posted inverse entry; document projections above are updated by
+-- reverse_journal_entry and remain filtered to active posted business rows.
+create or replace function get_dashboard_kpis(p_household_id uuid)
+returns table(revenue numeric,gross_profit numeric,net_profit numeric,family_expenses numeric,savings numeric,cash numeric)
+language sql stable security definer set search_path=public as $$
+  select
+    coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base when a.account_type='cogs' then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type in ('income','cogs','operating_expense') then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type='family_expense' then l.debit_base-l.credit_base else 0 end),0),
+    coalesce(sum(case when a.code='savings' then l.debit_base-l.credit_base else 0 end),0),
+    coalesce(sum(case when a.account_type='asset' then l.debit_base-l.credit_base else 0 end),0)
+  from journal_lines l
+  join journal_entries e on e.id=l.journal_entry_id
+  join ledger_accounts a on a.id=l.ledger_account_id
+  where l.household_id=p_household_id
+    and is_household_member(p_household_id)
+    and e.status in ('posted','reversed');
+$$;
+revoke all on function get_dashboard_kpis(uuid) from public;
+grant execute on function get_dashboard_kpis(uuid) to authenticated;

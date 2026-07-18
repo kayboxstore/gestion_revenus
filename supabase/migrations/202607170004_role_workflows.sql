@@ -31,6 +31,13 @@ returns uuid language plpgsql security definer set search_path=public as $$
 declare
   original journal_entries%rowtype;
   new_id uuid := gen_random_uuid();
+  sale_rec record;
+  payment_rec record;
+  stock_rec record;
+  stock_after numeric(20,4);
+  sale_total numeric(20,4);
+  paid_after numeric(20,4);
+  restored_status sale_status;
 begin
   if nullif(trim(p_reason),'') is null then
     raise exception 'reversal reason required';
@@ -44,6 +51,75 @@ begin
   end if;
 
   perform set_config('app.allow_posted_journal_insert','on',true);
+  perform set_config('app.allow_financial_document_write','on',true);
+
+  for sale_rec in
+    select * from sales where household_id=original.household_id and journal_entry_id=original.id for update
+  loop
+    update sales set status='cancelled'
+    where household_id=original.household_id and id=sale_rec.id;
+  end loop;
+
+  for payment_rec in
+    select * from payments where household_id=original.household_id and journal_entry_id=original.id for update
+  loop
+    update payments set status='reversed'
+    where household_id=original.household_id and id=payment_rec.id;
+
+    if payment_rec.sale_id is not null then
+      select total_source into sale_total
+      from sales
+      where household_id=original.household_id and id=payment_rec.sale_id
+      for update;
+
+      select coalesce(sum(balance_applied_source),0) into paid_after
+      from payments p
+      join journal_entries e on e.id=p.journal_entry_id
+      where p.household_id=original.household_id
+        and p.sale_id=payment_rec.sale_id
+        and p.status='posted'
+        and e.status='posted';
+
+      restored_status := case
+        when paid_after <= 0 then 'confirmed'::sale_status
+        when paid_after >= sale_total then 'paid'::sale_status
+        else 'partially_paid'::sale_status
+      end;
+      update sales set status=restored_status
+      where household_id=original.household_id and id=payment_rec.sale_id and status<>'cancelled';
+    end if;
+  end loop;
+
+  update expenses set status='reversed'
+  where household_id=original.household_id and journal_entry_id=original.id;
+  update purchases set status='reversed'
+  where household_id=original.household_id and journal_entry_id=original.id;
+
+  for stock_rec in
+    select sm.*
+    from stock_movements sm
+    where sm.household_id=original.household_id
+      and (
+        sm.reference_id in (select id from sales where household_id=original.household_id and journal_entry_id=original.id)
+        or sm.reference_id in (select id from purchases where household_id=original.household_id and journal_entry_id=original.id)
+      )
+    for update
+  loop
+    select quantity into stock_after
+    from current_stock_balance(original.household_id,stock_rec.product_id);
+    if stock_after - stock_rec.quantity < 0 then
+      raise exception 'reversal would make stock negative';
+    end if;
+    insert into stock_movements(
+      household_id,product_id,location_id,type,quantity,unit_cost_base,
+      reference_type,reference_id,movement_date
+    ) values(
+      stock_rec.household_id,stock_rec.product_id,stock_rec.location_id,
+      'reversal',-stock_rec.quantity,stock_rec.unit_cost_base,
+      'journal_reversal',new_id,current_date
+    );
+  end loop;
+
   insert into journal_entries(
     id, household_id, number, type, entry_date, status, description,
     activity_id, reversal_of, reversal_reason, created_by, posted_at,

@@ -51,6 +51,29 @@ async function asUser<T>(
   }
 }
 
+async function asAnon<T>(
+  callback: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  if (!pool) throw new Error("TEST_DATABASE_URL is required");
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query(
+      "select set_config('request.jwt.claim.role','anon',true), set_config('request.jwt.claims',$1,true)",
+      [JSON.stringify({ role: "anon" })],
+    );
+    await client.query("set local role anon");
+    const result = await callback(client);
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function one<T extends QueryResultRow>(
   client: PoolClient,
   sql: string,
@@ -563,6 +586,216 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
           ownerId,
         ]),
       ).rejects.toThrow(/at least one active owner/);
+    });
+  });
+
+  it("atomically reverses ledger, sales, payments, expenses, savings and stock projections", async () => {
+    await asUser(ownerId, async (client) => {
+      const kpiBefore = await one<{ revenue: string; cash: string }>(
+        client,
+        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        [refs.householdId],
+      );
+      const contribution = await record(client, {
+        type: "family_contribution",
+        amount: "30",
+        payload: { source_cash_account_id: refs.cashUsd },
+      });
+      let kpis = await one<{ revenue: string; cash: string }>(
+        client,
+        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        [refs.householdId],
+      );
+      expect(kpis.revenue).toBe(kpiBefore.revenue);
+      expect(Number(kpis.cash) - Number(kpiBefore.cash)).toBe(30);
+      await client.query("select reverse_journal_entry($1,'Apport annulé')", [
+        contribution.id,
+      ]);
+      kpis = await one<{ revenue: string; cash: string }>(
+        client,
+        "select revenue::text,cash::text from get_dashboard_kpis($1)",
+        [refs.householdId],
+      );
+      expect(kpis.revenue).toBe(kpiBefore.revenue);
+      expect(kpis.cash).toBe(kpiBefore.cash);
+
+      const credit = await record(client, {
+        type: "credit_sale",
+        amount: "80",
+        activity: "IPTV",
+        payload: { product_id: refs.iptvProduct, quantity: "1" },
+      });
+      const creditSale = await one<{ id: string }>(
+        client,
+        "select id from sales where journal_entry_id=$1",
+        [credit.id],
+      );
+      await client.query("select reverse_journal_entry($1,'Vente annulée')", [
+        credit.id,
+      ]);
+      const cancelledReceivable = await one<{ status: string; count: string }>(
+        client,
+        `select s.status::text,
+          (select count(*)::text from get_receivables_report($1) where label=s.number) as count
+         from sales s where s.id=$2`,
+        [refs.householdId, creditSale.id],
+      );
+      expect(cancelledReceivable.status).toBe("cancelled");
+      expect(cancelledReceivable.count).toBe("0");
+
+      const paidSaleEntry = await record(client, {
+        type: "credit_sale",
+        amount: "90",
+        activity: "IPTV",
+        payload: { product_id: refs.iptvProduct, quantity: "1" },
+      });
+      const paidSale = await one<{ id: string }>(
+        client,
+        "select id from sales where journal_entry_id=$1",
+        [paidSaleEntry.id],
+      );
+      const payment = await record(client, {
+        type: "payment",
+        amount: "90",
+        payload: { sale_id: paidSale.id, source_cash_account_id: refs.cashUsd },
+      });
+      await client.query("select reverse_journal_entry($1,'Paiement annulé')", [
+        payment.id,
+      ]);
+      const restoredSale = await one<{ status: string; due: string }>(
+        client,
+        `select s.status::text,
+          (select amount::text from get_receivables_report($1) where label=s.number) as due
+         from sales s where s.id=$2`,
+        [refs.householdId, paidSale.id],
+      );
+      expect(restoredSale.status).toBe("confirmed");
+      expect(restoredSale.due).toBe("90.00000000");
+
+      const stockBefore = await one<{ quantity: string }>(
+        client,
+        "select quantity::text from current_stock_balance($1,$2)",
+        [refs.householdId, refs.boxProduct],
+      );
+      const purchase = await record(client, {
+        type: "stock_purchase",
+        amount: "70",
+        activity: "ANDROID_TV_BOX",
+        payload: {
+          product_id: refs.boxProduct,
+          quantity: "2",
+          source_cash_account_id: refs.cashUsd,
+        },
+      });
+      await client.query("select reverse_journal_entry($1,'Achat annulé')", [
+        purchase.id,
+      ]);
+      let stockAfter = await one<{ quantity: string; compensators: string }>(
+        client,
+        `select b.quantity::text,
+          (select count(*)::text from stock_movements where reference_type='journal_reversal' and reference_id in (select id from journal_entries where reversal_of=$3)) as compensators
+         from current_stock_balance($1,$2) b`,
+        [refs.householdId, refs.boxProduct, purchase.id],
+      );
+      expect(stockAfter.quantity).toBe(stockBefore.quantity);
+      expect(stockAfter.compensators).toBe("1");
+
+      const physicalSale = await record(client, {
+        type: "cash_sale",
+        amount: "50",
+        activity: "ANDROID_TV_BOX",
+        payload: {
+          product_id: refs.boxProduct,
+          quantity: "1",
+          source_cash_account_id: refs.cashUsd,
+        },
+      });
+      const soldStock = await one<{ quantity: string }>(
+        client,
+        "select quantity::text from current_stock_balance($1,$2)",
+        [refs.householdId, refs.boxProduct],
+      );
+      await client.query(
+        "select reverse_journal_entry($1,'Vente physique annulée')",
+        [physicalSale.id],
+      );
+      stockAfter = await one<{ quantity: string; compensators: string }>(
+        client,
+        `select b.quantity::text,
+          (select count(*)::text from stock_movements where reference_type='journal_reversal' and reference_id in (select id from journal_entries where reversal_of=$3)) as compensators
+         from current_stock_balance($1,$2) b`,
+        [refs.householdId, refs.boxProduct, physicalSale.id],
+      );
+      expect(Number(stockAfter.quantity) - Number(soldStock.quantity)).toBe(1);
+      expect(stockAfter.compensators).toBe("1");
+
+      const expense = await record(client, {
+        type: "family_expense",
+        amount: "11",
+        payload: {
+          category_id: refs.familyCategory,
+          source_cash_account_id: refs.cashUsd,
+        },
+      });
+      await client.query("select reverse_journal_entry($1,'Dépense annulée')", [
+        expense.id,
+      ]);
+      const reversedExpense = await one<{ status: string }>(
+        client,
+        "select status::text from expenses where journal_entry_id=$1",
+        [expense.id],
+      );
+      expect(reversedExpense.status).toBe("reversed");
+    });
+  });
+
+  it("excludes real draft lines from reports and rejects anon report RPC execution", async () => {
+    await asUser(ownerId, async (client) => {
+      const before = await one<{ cash: string; caisse: string }>(
+        client,
+        `select
+          (select cash::text from get_dashboard_kpis($1)) as cash,
+          (select amount::text from get_account_balances($1) where label='Caisse USD') as caisse`,
+        [refs.householdId],
+      );
+      const ids = await one<{ entry: string; cash: string; equity: string }>(
+        client,
+        `select gen_random_uuid()::text as entry,
+          (select ledger_account_id::text from cash_accounts where id=$2) as cash,
+          (select id::text from ledger_accounts where household_id=$1 and code='equity') as equity`,
+        [refs.householdId, refs.cashUsd],
+      );
+      await client.query(
+        `insert into journal_entries(id,household_id,number,type,entry_date,status,created_by)
+         values($1,$2,$3,'manual',current_date,'draft',$4)`,
+        [ids.entry, refs.householdId, `DRAFT-${randomUUID()}`, ownerId],
+      );
+      await client.query(
+        `insert into journal_lines(household_id,journal_entry_id,ledger_account_id,cash_account_id,debit_base,credit_base,currency,source_amount,exchange_rate)
+         values($1,$2,$3,$4,999,0,'USD',999,1),($1,$2,$5,null,0,999,'USD',999,1)`,
+        [refs.householdId, ids.entry, ids.cash, refs.cashUsd, ids.equity],
+      );
+      const after = await one<{ cash: string; caisse: string }>(
+        client,
+        `select
+          (select cash::text from get_dashboard_kpis($1)) as cash,
+          (select amount::text from get_account_balances($1) where label='Caisse USD') as caisse`,
+        [refs.householdId],
+      );
+      expect(after).toEqual(before);
+    });
+
+    await asAnon(async (client) => {
+      await expect(
+        client.query("select * from get_dashboard_kpis($1)", [
+          refs.householdId,
+        ]),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        client.query("select * from get_account_balances($1)", [
+          refs.householdId,
+        ]),
+      ).rejects.toThrow(/permission denied/);
     });
   });
 
