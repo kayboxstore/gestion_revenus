@@ -95,3 +95,78 @@ export async function reverseOperation(formData: FormData) {
   revalidatePath("/operations");
   redirect("/operations?success=reversed");
 }
+
+const memberSchema = z.object({
+  user_id: z.string().uuid(),
+  role: z.enum(["owner", "manager", "operator", "reader"]),
+  status: z.enum(["active", "inactive"]),
+});
+
+const invitationSchema = z.object({
+  email: z.string().trim().email().max(160),
+  role: z.enum(["manager", "operator", "reader"]),
+});
+
+const cancelInvitationSchema = z.object({ id: z.string().uuid() });
+
+async function ownedHousehold() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: member } = await supabase
+    .from("household_members")
+    .select("household_id,role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  if (!member?.household_id) redirect("/onboarding");
+  if (member.role !== "owner") return null;
+  return { supabase, householdId: member.household_id };
+}
+
+export async function updateMemberRole(formData: FormData) {
+  const parsed = memberSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/more?error=member_validation");
+  const context = await ownedHousehold();
+  if (!context) redirect("/more?error=not_allowed");
+  const { error } = await context.supabase.rpc("owner_manage_member", {
+    p_household_id: context.householdId,
+    p_user_id: parsed.data.user_id,
+    p_role: parsed.data.role,
+    p_status: parsed.data.status,
+  });
+  if (error) redirect("/more?error=member_failed");
+  revalidatePath("/more");
+  redirect("/more?success=member");
+}
+
+export async function createInvitation(formData: FormData) {
+  const parsed = invitationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/more?error=invitation_validation");
+  const context = await ownedHousehold();
+  if (!context) redirect("/more?error=not_allowed");
+  const { error } = await context.supabase.rpc("owner_create_invitation", {
+    p_household_id: context.householdId,
+    p_email: parsed.data.email,
+    p_role: parsed.data.role,
+  });
+  if (error) redirect("/more?error=invitation_failed");
+  revalidatePath("/more");
+  redirect("/more?success=invitation");
+}
+
+export async function cancelInvitation(formData: FormData) {
+  const parsed = cancelInvitationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/more?error=invitation_validation");
+  const context = await ownedHousehold();
+  if (!context) redirect("/more?error=not_allowed");
+  const { error } = await context.supabase.rpc("owner_cancel_invitation", {
+    p_invitation_id: parsed.data.id,
+  });
+  if (error) redirect("/more?error=invitation_failed");
+  revalidatePath("/more");
+  redirect("/more?success=invitation_cancelled");
+}

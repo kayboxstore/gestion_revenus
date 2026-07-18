@@ -36,6 +36,27 @@ export type DashboardSale = {
   total_source: string;
   status: string;
 };
+export type HouseholdMember = {
+  user_id: string;
+  role: "owner" | "manager" | "operator" | "reader";
+  status: string;
+  display_name: string | null;
+};
+export type Invitation = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+};
+export type ReportRow = { label: string; amount: string; detail?: string };
+export type DashboardReports = {
+  activityMargins: ReportRow[];
+  expensesByCategory: ReportRow[];
+  accountBalances: ReportRow[];
+  stock: ReportRow[];
+  receivables: ReportRow[];
+  savingsProgress: ReportRow[];
+};
 export type DashboardData = {
   configured: boolean;
   authenticated: boolean;
@@ -49,6 +70,18 @@ export type DashboardData = {
   categories: DashboardReference[];
   savingsGoals: DashboardReference[];
   openSales: DashboardSale[];
+  members: HouseholdMember[];
+  invitations: Invitation[];
+  reports: DashboardReports;
+};
+
+const emptyReports: DashboardReports = {
+  activityMargins: [],
+  expensesByCategory: [],
+  accountBalances: [],
+  stock: [],
+  receivables: [],
+  savingsProgress: [],
 };
 
 const zeroKpis: DashboardKpis = {
@@ -83,6 +116,9 @@ export async function getDashboardData(
       categories: [],
       savingsGoals: [],
       openSales: [],
+      members: [],
+      invitations: [],
+      reports: emptyReports,
     };
   }
 
@@ -104,6 +140,9 @@ export async function getDashboardData(
       categories: [],
       savingsGoals: [],
       openSales: [],
+      members: [],
+      invitations: [],
+      reports: emptyReports,
     };
   }
 
@@ -129,6 +168,9 @@ export async function getDashboardData(
       categories: [],
       savingsGoals: [],
       openSales: [],
+      members: [],
+      invitations: [],
+      reports: emptyReports,
     };
   }
 
@@ -157,6 +199,14 @@ export async function getDashboardData(
     { data: categories },
     { data: savingsGoals },
     { data: openSales },
+    { data: members },
+    { data: invitations },
+    { data: activityMargins },
+    { data: expensesByCategory },
+    { data: accountBalances },
+    { data: stock },
+    { data: receivables },
+    { data: savingsProgress },
   ] = await Promise.all([
     supabase.rpc("get_dashboard_kpis", {
       p_household_id: householdId,
@@ -200,6 +250,32 @@ export async function getDashboardData(
       .eq("household_id", householdId)
       .in("status", ["confirmed", "partially_paid", "overdue"])
       .order("sale_date", { ascending: false }),
+    supabase
+      .from("household_members")
+      .select("user_id,role,status,profiles(display_name)")
+      .eq("household_id", householdId)
+      .order("joined_at"),
+    supabase
+      .from("invitations")
+      .select("id,email,role,status")
+      .eq("household_id", householdId)
+      .order("created_at", { ascending: false }),
+    supabase.rpc("get_activity_margins", {
+      p_household_id: householdId,
+      p_from: filters.from ?? null,
+      p_to: filters.to ?? null,
+      p_activity_id: filters.activityId ?? null,
+    }),
+    supabase.rpc("get_expenses_by_category", {
+      p_household_id: householdId,
+      p_from: filters.from ?? null,
+      p_to: filters.to ?? null,
+      p_activity_id: filters.activityId ?? null,
+    }),
+    supabase.rpc("get_account_balances", { p_household_id: householdId }),
+    supabase.rpc("get_stock_report", { p_household_id: householdId }),
+    supabase.rpc("get_receivables_report", { p_household_id: householdId }),
+    supabase.rpc("get_savings_progress", { p_household_id: householdId }),
   ]);
 
   return {
@@ -222,5 +298,22 @@ export async function getDashboardData(
     categories: (categories ?? []) as DashboardReference[],
     savingsGoals: (savingsGoals ?? []) as DashboardReference[],
     openSales: (openSales ?? []) as DashboardSale[],
+    members: (members ?? []).map((row) => ({
+      user_id: row.user_id,
+      role: row.role,
+      status: row.status,
+      display_name:
+        (row.profiles as { display_name?: string } | null)?.display_name ??
+        null,
+    })),
+    invitations: (invitations ?? []) as Invitation[],
+    reports: {
+      activityMargins: (activityMargins ?? []) as ReportRow[],
+      expensesByCategory: (expensesByCategory ?? []) as ReportRow[],
+      accountBalances: (accountBalances ?? []) as ReportRow[],
+      stock: (stock ?? []) as ReportRow[],
+      receivables: (receivables ?? []) as ReportRow[],
+      savingsProgress: (savingsProgress ?? []) as ReportRow[],
+    },
   };
 }

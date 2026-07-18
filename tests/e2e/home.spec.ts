@@ -119,3 +119,35 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     page.getByText("Écriture annulée par une écriture inverse traçable."),
   ).toBeVisible();
 });
+
+test("administre les rôles et exporte les rapports authentifiés", async ({
+  page,
+}) => {
+  test.skip(!configured, "Supabase local credentials are required");
+  const email = process.env.TEST_OWNER_EMAIL ?? "e2e-owner@example.test";
+  const password = process.env.TEST_OWNER_PASSWORD ?? "Test-password-1";
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Mot de passe").fill(password);
+  await page.getByRole("button", { name: "Se connecter" }).click();
+
+  await page.getByRole("link", { name: "Plus" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Membres, invitations et rôles" }),
+  ).toBeVisible();
+  await page.getByLabel("Email invité").fill("lecteur-e2e@example.test");
+  await page.locator('select[name="role"]').last().selectOption("reader");
+  await page.getByRole("button", { name: "Inviter" }).click();
+  await expect(page.getByText("Invitation créée.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Accueil" }).click();
+  await page.getByRole("link", { name: "Rapports" }).click();
+  await expect(page.getByRole("heading", { name: "Rapports" })).toBeVisible();
+  await expect(page.getByText("Marge par activité")).toBeVisible();
+  await expect(page.getByText("Dépenses par catégorie")).toBeVisible();
+  await expect(page.getByText("Créances clients")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Exporter CSV côté serveur" }),
+  ).toHaveAttribute("href", /\/api\/reports\/export/);
+});

@@ -24,7 +24,7 @@ const optionalRate = z.preprocess(
     .optional(),
 );
 
-const operationSchema = z.object({
+const baseOperationSchema = z.object({
   operation_type: z.enum([
     "cash_sale",
     "credit_sale",
@@ -61,6 +61,59 @@ const operationSchema = z.object({
   savings_goal_id: optionalUuid,
   fees_source: optionalDecimal,
   idempotency_key: z.string().uuid(),
+});
+
+const operationSchema = baseOperationSchema.superRefine((value, context) => {
+  const requireField = (
+    field: keyof z.infer<typeof baseOperationSchema>,
+    message: string,
+  ) => {
+    if (!value[field])
+      context.addIssue({ code: "custom", path: [field], message });
+  };
+  if (
+    ["cash_sale", "credit_sale", "stock_purchase"].includes(
+      value.operation_type,
+    )
+  ) {
+    requireField("product_id", "Produit obligatoire");
+    requireField("quantity", "Quantité obligatoire");
+  }
+  if (
+    [
+      "cash_sale",
+      "payment",
+      "stock_purchase",
+      "operating_expense",
+      "family_expense",
+      "family_contribution",
+      "family_withdrawal",
+      "savings_contribution",
+    ].includes(value.operation_type)
+  ) {
+    requireField(
+      "source_cash_account_id",
+      "Compte source ou encaissement obligatoire",
+    );
+  }
+  if (value.operation_type === "payment")
+    requireField("sale_id", "Vente à régler obligatoire");
+  if (
+    value.operation_type === "transfer" ||
+    value.operation_type === "savings_contribution"
+  ) {
+    requireField("source_cash_account_id", "Compte source obligatoire");
+    requireField(
+      "destination_cash_account_id",
+      "Compte destination obligatoire",
+    );
+  }
+  if (["operating_expense", "family_expense"].includes(value.operation_type))
+    requireField("category_id", "Catégorie obligatoire");
+  if (value.operation_type === "savings_contribution")
+    requireField("savings_goal_id", "Objectif d’épargne obligatoire");
+  if (value.operation_type === "credit_sale")
+    requireField("due_date", "Échéance obligatoire");
 });
 
 export async function createQuickOperation(formData: FormData) {
