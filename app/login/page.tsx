@@ -5,6 +5,13 @@ const messages: Record<string, string> = {
   invalid_signup:
     "Saisissez un email valide et un mot de passe de 8 caractères minimum.",
   signup_failed: "Le compte n’a pas pu être créé. Réessayez dans un instant.",
+  account_exists:
+    "Un compte utilise déjà cette adresse. Essayez de vous connecter ou de réinitialiser le mot de passe.",
+  email_rate_limited:
+    "Trop d’emails ont été demandés. Patientez quelques minutes avant de réessayer.",
+  signup_disabled: "La création de comptes est temporairement désactivée.",
+  auth_configuration:
+    "Le service de connexion est mal configuré. Vérifiez les paramètres Supabase du déploiement.",
   confirmation_sent: "Vérifiez votre boîte email pour confirmer votre compte.",
   invalid_email: "Saisissez une adresse email valide.",
   reset_sent: "Si ce compte existe, un lien de réinitialisation a été envoyé.",

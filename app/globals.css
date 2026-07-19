@@ -1,4 +1,10 @@
 @import "tailwindcss";
+
+@theme {
+  --color-night: #0f2742;
+  --color-electric: #2563eb;
+}
+
 :root {
   color-scheme: light;
   background: #f7fafc;
