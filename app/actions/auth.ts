@@ -15,8 +15,46 @@ const onboardingSchema = z.object({
   householdName: z.string().trim().min(2).max(100),
 });
 
+type SafeAuthError = {
+  code?: string;
+  status?: number;
+  message: string;
+};
+
 function authRedirect(code: string, mode = "login"): never {
   redirect(`/login?mode=${mode}&message=${code}`);
+}
+
+function logAuthError(operation: string, error: SafeAuthError) {
+  console.error(`[auth] ${operation} failed`, {
+    code: error.code ?? "unknown",
+    status: error.status ?? "unknown",
+    message: error.message,
+  });
+}
+
+function signupFailureCode(error: SafeAuthError) {
+  const details = `${error.code ?? ""} ${error.message}`.toLowerCase();
+
+  if (details.includes("rate") && details.includes("email")) {
+    return "email_rate_limited";
+  }
+  if (details.includes("signup") && details.includes("disabled")) {
+    return "signup_disabled";
+  }
+  if (
+    details.includes("already registered") ||
+    details.includes("user_already_exists")
+  ) {
+    return "account_exists";
+  }
+  if (
+    details.includes("invalid api key") ||
+    details.includes("failed to fetch")
+  ) {
+    return "auth_configuration";
+  }
+  return "signup_failed";
 }
 
 async function appOrigin() {
@@ -38,7 +76,10 @@ export async function signIn(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) authRedirect("invalid_credentials");
+  if (error) {
+    logAuthError("signIn", error);
+    authRedirect("invalid_credentials");
+  }
 
   const next = String(formData.get("next") ?? "/");
   redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
@@ -57,7 +98,10 @@ export async function signUp(formData: FormData) {
     ...parsed.data,
     options: { emailRedirectTo: `${origin}/auth/callback?next=/onboarding` },
   });
-  if (error) authRedirect("signup_failed", "signup");
+  if (error) {
+    logAuthError("signUp", error);
+    authRedirect(signupFailureCode(error), "signup");
+  }
   if (data.session) redirect("/onboarding");
   authRedirect("confirmation_sent", "login");
 }
@@ -73,9 +117,10 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createClient();
   const origin = await appOrigin();
-  await supabase.auth.resetPasswordForEmail(email.data, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
     redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
   });
+  if (error) logAuthError("requestPasswordReset", error);
   // Intentionally identical for existing and unknown accounts.
   authRedirect("reset_sent", "login");
 }
@@ -90,7 +135,10 @@ export async function updatePassword(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: password.data });
-  if (error) redirect("/auth/update-password?error=validation");
+  if (error) {
+    logAuthError("updatePassword", error);
+    redirect("/auth/update-password?error=validation");
+  }
   redirect("/?message=password_updated");
 }
 
