@@ -44,7 +44,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await page.getByLabel("Votre nom").fill("Propriétaire E2E");
   await page.getByLabel("Nom du foyer").fill("Foyer E2E");
   await page.getByRole("button", { name: "Initialiser" }).click();
-  await expect(page.getByText("Foyer E2E", { exact: false })).toBeVisible();
+  await expect(page.getByText("Foyer E2E", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Opérations" }).click();
   await page.locator('select[name="operation_type"]').selectOption("cash_sale");
