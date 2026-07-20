@@ -118,8 +118,19 @@ const operationSchema = baseOperationSchema.superRefine((value, context) => {
 });
 
 export async function createQuickOperation(formData: FormData) {
-  const parsed = operationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect("/operations?error=validation");
+  const raw = Object.fromEntries(formData);
+  const returnToStock = raw.return_to === "stock";
+  const parsed = operationSchema.safeParse(raw);
+  const operationErrorPath = (code: string) => {
+    const query = new URLSearchParams({ error: code });
+    if (typeof raw.operation_type === "string")
+      query.set("type", raw.operation_type);
+    if (typeof raw.product_id === "string")
+      query.set("product", raw.product_id);
+    if (returnToStock) query.set("return_to", "stock");
+    return `/operations?${query.toString()}`;
+  };
+  if (!parsed.success) redirect(operationErrorPath("validation"));
 
   const supabase = await createClient();
   const {
@@ -201,10 +212,12 @@ export async function createQuickOperation(formData: FormData) {
     const code =
       knownErrors.find(([message]) => error.message.includes(message))?.[1] ??
       "operation_failed";
-    redirect(`/operations?error=${code}`);
+    redirect(operationErrorPath(code));
   }
   revalidatePath("/");
   revalidatePath("/operations");
+  revalidatePath("/stock");
+  if (returnToStock) redirect("/stock?success=operation");
   redirect(
     parsed.data.operation_type === "opening_stock"
       ? "/operations?success=opening_stock"

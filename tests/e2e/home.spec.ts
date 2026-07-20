@@ -13,6 +13,10 @@ test("protects business routes and exposes complete French authentication", asyn
   if (configured) {
     await expect(page).toHaveURL(/\/login\?next=/);
   }
+  await page.goto("/stock");
+  if (configured) {
+    await expect(page).toHaveURL(/\/login\?next=/);
+  }
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
@@ -72,7 +76,8 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     fullPage: true,
   });
 
-  await page.getByRole("link", { name: "Activités" }).click();
+  await page.getByRole("link", { name: "Plus" }).click();
+  await page.getByRole("link", { name: "Activités", exact: true }).click();
   const billiard = page.locator("article").filter({ hasText: "BILLIARD" });
   await billiard.locator('select[name="active"]').selectOption("true");
   await billiard.getByRole("button", { name: "Enregistrer" }).click();
@@ -184,6 +189,36 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   ).toContainText("1");
   await page.screenshot({
     path: "test-results/screens/operations-mobile.png",
+    fullPage: true,
+  });
+
+  await page.getByRole("link", { name: "Stock", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Stock" })).toBeVisible();
+  await expect(
+    page.getByText("Valeur comptable", { exact: true }),
+  ).toBeVisible();
+  const miniUpsCard = page
+    .locator("article.stock-product-card")
+    .filter({ hasText: "Mini UPS" });
+  await expect(miniUpsCard.getByText("Stock bas")).toBeVisible();
+  await expect(
+    miniUpsCard.getByText("Disponible").locator("..").locator("strong"),
+  ).toContainText("1");
+  const countPanel = miniUpsCard
+    .locator("details.stock-tool-panel")
+    .filter({ hasText: "Comptage physique" });
+  await countPanel.locator("summary").click();
+  await countPanel.locator('input[name="counted_quantity"]').fill("1");
+  await countPanel
+    .getByRole("button", { name: "Enregistrer le comptage" })
+    .click();
+  await expect(page.getByText("Comptage physique enregistré.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Inventaires physiques" }),
+  ).toBeVisible();
+  await expect(page.getByText("Écart 0", { exact: false })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/screens/stock-mobile.png",
     fullPage: true,
   });
 });

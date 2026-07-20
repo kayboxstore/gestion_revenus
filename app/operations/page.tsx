@@ -41,6 +41,9 @@ const operationLabels: Record<string, string> = {
   reversal: "Annulation",
 };
 
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function isZeroQuantity(quantity?: string) {
   return !quantity || /^0(?:\.0+)?$/.test(quantity);
 }
@@ -114,7 +117,16 @@ export default async function Page({
           </section>
         ) : (
           <section className="operations-layout">
-            <QuickOperationForm data={data} initialType={params.type} />
+            <QuickOperationForm
+              data={data}
+              initialType={params.type}
+              initialProduct={
+                params.product && uuidPattern.test(params.product)
+                  ? params.product
+                  : undefined
+              }
+              returnTo={params.return_to === "stock" ? "stock" : undefined}
+            />
             <aside className="operations-sidebar">
               <section className="surface-card sidebar-card stock-card">
                 <div className="section-title">
@@ -155,6 +167,10 @@ export default async function Page({
                 ) : (
                   <p className="sidebar-empty">Aucun produit physique actif.</p>
                 )}
+                <Link href="/stock" className="secondary-button w-full">
+                  <AppIcon name="box" className="h-4 w-4" />
+                  Ouvrir la gestion du stock
+                </Link>
               </section>
 
               <section className="surface-card sidebar-card recent-operations-card">

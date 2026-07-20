@@ -7,7 +7,7 @@ import { AppIcon, BrandMark, type AppIconName } from "./app-icon";
 const items: Array<{ href: string; label: string; icon: AppIconName }> = [
   { href: "/", label: "Accueil", icon: "home" },
   { href: "/operations", label: "Opérations", icon: "operations" },
-  { href: "/activities", label: "Activités", icon: "activities" },
+  { href: "/stock", label: "Stock", icon: "box" },
   { href: "/reports", label: "Rapports", icon: "reports" },
   { href: "/more", label: "Plus", icon: "more" },
 ];

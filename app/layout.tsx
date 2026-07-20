@@ -1,6 +1,7 @@
 import "./globals.css";
 import "./olive-future.css";
 import "./dashboard-editorial.css";
+import "./stock.css";
 import type { Metadata, Viewport } from "next";
 import { PwaRegister } from "./pwa-register";
 export const metadata: Metadata = {
