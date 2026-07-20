@@ -5,8 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "KayBox Family",
     start_url: "/",
     display: "standalone",
-    background_color: "#f3f6fb",
-    theme_color: "#0b1f38",
+    background_color: "#0c1209",
+    theme_color: "#0c1209",
     icons: [
       {
         src: "/icon.svg",
