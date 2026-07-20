@@ -115,8 +115,9 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
 
   await page.getByRole("link", { name: "Opérations" }).click();
   const savingsEntry = page
-    .locator("li")
-    .filter({ hasText: "savings_contribution" })
+    .locator(".operations-journal-list > li")
+    .filter({ hasText: "Épargne" })
+    .filter({ hasText: "Validée" })
     .first();
   await savingsEntry.locator("summary").click();
   await savingsEntry.getByLabel("Motif d’annulation").fill("Correction E2E");
