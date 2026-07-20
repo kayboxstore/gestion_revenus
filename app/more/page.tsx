@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   cancelInvitation,
   createInvitation,
@@ -91,6 +92,29 @@ export default async function Page({
             </div>
           </div>
         </section>
+
+        <nav className="management-shortcuts" aria-label="Outils de gestion">
+          <Link href="/activities">
+            <span>
+              <AppIcon name="activities" />
+            </span>
+            <div>
+              <strong>Activités</strong>
+              <small>Services, commerce et billard</small>
+            </div>
+            <AppIcon name="arrow" />
+          </Link>
+          <Link href="/stock">
+            <span>
+              <AppIcon name="box" />
+            </span>
+            <div>
+              <strong>Gestion du stock</strong>
+              <small>Quantités, alertes et comptages</small>
+            </div>
+            <AppIcon name="arrow" />
+          </Link>
+        </nav>
 
         <section className="more-grid">
           <section className="surface-card settings-card">

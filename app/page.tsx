@@ -184,8 +184,8 @@ export default async function Home({
     },
     {
       label: "Stock",
-      detail: "Acheter ou initialiser",
-      href: "/operations?type=stock_purchase",
+      detail: "Piloter l’inventaire",
+      href: "/stock",
       icon: "box",
       tone: "amber",
     },
@@ -535,7 +535,7 @@ export default async function Home({
                       {outOfStockProducts.slice(0, 3).map((product) => (
                         <Link
                           key={product.id}
-                          href="/operations?type=opening_stock"
+                          href="/stock"
                           className="attention-item"
                         >
                           <span data-level="warning">

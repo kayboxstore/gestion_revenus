@@ -90,9 +90,13 @@ export function isOperationType(value?: string): value is OperationType {
 export function QuickOperationForm({
   data,
   initialType,
+  initialProduct,
+  returnTo,
 }: {
   data: DashboardData;
   initialType?: string;
+  initialProduct?: string;
+  returnTo?: "stock";
 }) {
   const [type, setType] = useState<OperationType>(
     isOperationType(initialType) ? initialType : "cash_sale",
@@ -100,6 +104,11 @@ export function QuickOperationForm({
   const [amount, setAmount] = useState("10.00");
   const [currency, setCurrency] = useState("USD");
   const [quantity, setQuantity] = useState("");
+  const [productId, setProductId] = useState(
+    data.products.some((product) => product.id === initialProduct)
+      ? (initialProduct ?? "")
+      : "",
+  );
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
   const canManage = data.role === "owner" || data.role === "manager";
   const openingStock = type === "opening_stock";
@@ -151,7 +160,16 @@ export function QuickOperationForm({
             name="operation_type"
             required
             value={type}
-            onChange={(event) => setType(event.target.value as OperationType)}
+            onChange={(event) => {
+              const nextType = event.target.value as OperationType;
+              setType(nextType);
+              if (
+                nextType === "opening_stock" &&
+                data.products.find((item) => item.id === productId)?.type !==
+                  "physical"
+              )
+                setProductId("");
+            }}
             className="premium-field operation-type-select"
             aria-describedby="operation-help"
           >
@@ -256,7 +274,13 @@ export function QuickOperationForm({
               </legend>
               <label className="field-label">
                 {openingStock ? "Produit physique" : "Produit / offre IPTV"}
-                <select name="product_id" required className="premium-field">
+                <select
+                  name="product_id"
+                  required
+                  value={productId}
+                  onChange={(event) => setProductId(event.target.value)}
+                  className="premium-field"
+                >
                   <option value="">Choisir explicitement un produit</option>
                   {selectableProducts.map((product) => (
                     <option key={product.id} value={product.id}>
@@ -447,6 +471,7 @@ export function QuickOperationForm({
         </div>
       </section>
       <input name="idempotency_key" type="hidden" value={idempotencyKey} />
+      {returnTo && <input name="return_to" type="hidden" value={returnTo} />}
       <SubmitButton />
     </form>
   );

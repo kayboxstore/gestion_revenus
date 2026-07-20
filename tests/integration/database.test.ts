@@ -710,6 +710,142 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     );
   });
 
+  it("records idempotent physical counts without mutating stock or accounting", async () => {
+    const countKey = randomUUID();
+    await asUser(ownerId, async (client) => {
+      await client.query(
+        "select update_stock_product_settings($1,$2,'MINI-UPS-PRO',35,2)",
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      const settings = await one<{
+        sku: string;
+        suggested_price: string;
+        low_stock_threshold: string;
+      }>(
+        client,
+        `select sku,suggested_price::text,low_stock_threshold::text
+         from products where household_id=$1 and id=$2`,
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      expect(settings).toEqual({
+        sku: "MINI-UPS-PRO",
+        suggested_price: "35.0000",
+        low_stock_threshold: "2.0000",
+      });
+
+      const before = await one<{
+        quantity: string;
+        movements: string;
+        entries: string;
+      }>(
+        client,
+        `select quantity::text,
+          (select count(*)::text from stock_movements where household_id=$1) as movements,
+          (select count(*)::text from journal_entries where household_id=$1) as entries
+         from current_stock_balance($1,$2)`,
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      const first = await one<{ id: string }>(
+        client,
+        `select record_inventory_count(
+          $1,$2,(select quantity+1 from current_stock_balance($1,$2)),
+          current_date,$3
+        ) as id`,
+        [refs.householdId, refs.miniUpsProduct, countKey],
+      );
+      const retry = await one<{ id: string }>(
+        client,
+        `select record_inventory_count(
+          $1,$2,(select quantity+1 from current_stock_balance($1,$2)),
+          current_date,$3
+        ) as id`,
+        [refs.householdId, refs.miniUpsProduct, countKey],
+      );
+      expect(retry.id).toBe(first.id);
+
+      const line = await one<{
+        theoretical: string;
+        counted: string;
+        difference: string;
+      }>(
+        client,
+        `select theoretical_quantity::text as theoretical,
+          counted_quantity::text as counted,difference::text
+         from inventory_count_lines where inventory_count_id=$1`,
+        [first.id],
+      );
+      expect(decimalDelta(line.counted, line.theoretical)).toBe("1.0000");
+      expect(line.difference).toBe("1.0000");
+
+      const after = await one<{
+        quantity: string;
+        movements: string;
+        entries: string;
+      }>(
+        client,
+        `select quantity::text,
+          (select count(*)::text from stock_movements where household_id=$1) as movements,
+          (select count(*)::text from journal_entries where household_id=$1) as entries
+         from current_stock_balance($1,$2)`,
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      expect(after).toEqual(before);
+
+      await client.query("savepoint expected_count_conflict");
+      await expect(
+        client.query(
+          `select record_inventory_count(
+            $1,$2,(select quantity+2 from current_stock_balance($1,$2)),
+            current_date,$3
+          )`,
+          [refs.householdId, refs.miniUpsProduct, countKey],
+        ),
+      ).rejects.toThrow(/idempotency key conflict/);
+      await client.query("rollback to savepoint expected_count_conflict");
+      await client.query("release savepoint expected_count_conflict");
+    });
+
+    await asUser(operatorId, async (client) => {
+      await client.query(
+        `select record_inventory_count(
+          $1,$2,(select quantity from current_stock_balance($1,$2)),
+          current_date,$3
+        )`,
+        [refs.householdId, refs.miniUpsProduct, randomUUID()],
+      );
+      await client.query("savepoint expected_operator_settings_error");
+      await expect(
+        client.query(
+          "select update_stock_product_settings($1,$2,'FORBIDDEN',40,3)",
+          [refs.householdId, refs.miniUpsProduct],
+        ),
+      ).rejects.toThrow(/not allowed/);
+      await client.query(
+        "rollback to savepoint expected_operator_settings_error",
+      );
+      await client.query("release savepoint expected_operator_settings_error");
+    });
+
+    await asUser(readerId, async (client) => {
+      await expect(
+        client.query("select record_inventory_count($1,$2,0,current_date,$3)", [
+          refs.householdId,
+          refs.miniUpsProduct,
+          randomUUID(),
+        ]),
+      ).rejects.toThrow(/not allowed/);
+    });
+    await asUser(otherOwnerId, async (client) => {
+      await expect(
+        client.query("select record_inventory_count($1,$2,0,current_date,$3)", [
+          refs.householdId,
+          refs.miniUpsProduct,
+          randomUUID(),
+        ]),
+      ).rejects.toThrow(/not allowed/);
+    });
+  });
+
   it("reverses with balanced cash-account trace and keeps posted lines immutable", async () => {
     await asUser(ownerId, async (client) => {
       const original = await record(client, {

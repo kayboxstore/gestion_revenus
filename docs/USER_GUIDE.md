@@ -4,13 +4,26 @@
 2. Si aucun foyer n'existe, ouvrir l'onboarding et créer le foyer : l'application initialise IPTV, Mini UPS, Android TV Box, Billard inactif, catégories, devises, comptes et emplacement de stock.
 3. Depuis l'accueil, consulter les KPI calculés depuis le grand livre : chiffre d'affaires, bénéfice brut, bénéfice net, dépenses familiales, épargne et trésorerie.
 4. Utiliser « Ajouter rapidement » pour démarrer vente, entrée, dépense, achat, transfert, apport, retrait ou épargne.
-5. Consulter les activités, opérations, rapports et paramètres depuis la navigation principale mobile à cinq entrées.
+5. Consulter le stock, les opérations, les rapports et les paramètres depuis la navigation principale mobile à cinq entrées. Les activités restent accessibles dans **Plus**.
 
 ## Activités
 
 Dans **Activités**, le propriétaire ou le gestionnaire peut renommer une
 activité et changer son état. La table de billard est créée inactive : choisissez
 **Active**, puis **Enregistrer** au moment du lancement, sans migration technique.
+
+## Stock au quotidien
+
+Dans **Stock**, consultez les quantités, la valeur comptable au coût moyen, les
+ruptures et les seuils d’alerte. Utilisez **Approvisionner** pour un nouvel achat
+payé par la trésorerie, **Stock initial** uniquement pour les articles possédés
+avant l’application, et **Vendre** pour enregistrer une sortie réelle.
+
+Le propriétaire ou le gestionnaire peut définir le SKU, le prix conseillé et le
+seuil d’alerte de chaque produit. Tous les rôles opérationnels peuvent réaliser
+un **Comptage physique**. Le comptage produit un rapport d’écart mais ne modifie
+jamais silencieusement le stock comptable ni le résultat ; toute correction doit
+rester une opération explicite et auditée.
 
 ## Épargne
 
