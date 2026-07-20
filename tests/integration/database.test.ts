@@ -488,7 +488,12 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       expect(report.rows[0]).toEqual({
         label: "Android TV Box",
         amount: "106.6666",
-        detail: "4 unité(s) en stock",
+        detail: "4 unités en stock",
+      });
+      expect(report.rows[1]).toEqual({
+        label: "Mini UPS",
+        amount: "0.0000",
+        detail: "0 unités en stock",
       });
     });
   });

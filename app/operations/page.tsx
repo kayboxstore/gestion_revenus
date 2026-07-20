@@ -38,6 +38,7 @@ const operationLabels: Record<string, string> = {
   family_contribution: "Apport familial",
   family_withdrawal: "Retrait familial",
   savings_contribution: "Épargne",
+  reversal: "Annulation",
 };
 
 function isZeroQuantity(quantity?: string) {

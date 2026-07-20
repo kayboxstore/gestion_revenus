@@ -11,8 +11,12 @@ as $$
   select
     p.name,
     coalesce(sum(sm.quantity * sm.unit_cost_base),0)::numeric(20,4),
-    trim(trailing '.' from trim(trailing '0' from coalesce(sum(sm.quantity),0)::text))
-      || ' unité(s) en stock'
+    case
+      when coalesce(sum(sm.quantity),0)=1 then '1 unité en stock'
+      when coalesce(sum(sm.quantity),0)=0 then '0 unités en stock'
+      else trim(trailing '.' from trim(trailing '0' from sum(sm.quantity)::text))
+        || ' unités en stock'
+    end
   from products p
   left join stock_movements sm
     on sm.household_id=p.household_id and sm.product_id=p.id
