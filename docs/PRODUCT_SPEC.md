@@ -180,9 +180,11 @@ Le bouton « Ajouter » reste accessible depuis Accueil et Opérations. Sur bure
 
 ## 7. Design
 
-- direction : premium, claire, humaine et rassurante ;
-- palette recommandée : bleu nuit, bleu électrique mesuré, vert pour les résultats positifs, ambre pour les alertes, rouge uniquement pour danger et annulation ;
-- cartes aérées, chiffres tabulaires, graphiques lisibles, icônes cohérentes ;
+- direction « Kayembe Signature » : premium, éditoriale, intuitive, humaine et rassurante ;
+- palette principale : blanc cassé, ivoire chaud et vert olive clair ; vert olive profond pour la navigation et les zones de contraste, laiton vieilli pour les accents ;
+- vert positif réservé aux résultats favorables, ambre aux alertes et terre cuite uniquement au danger ou à l’annulation ;
+- titres et grands chiffres à caractère éditorial, textes fonctionnels en sans-serif, chiffres tabulaires et icônes cohérentes ;
+- surfaces franches, géométrie architecturale, cartes aérées et graphiques lisibles ;
 - aucune surcharge de dégradés, de glassmorphism ou d’animations ;
 - états vides pédagogiques avec action immédiate ;
 - graphiques accompagnés de valeurs textuelles accessibles.
@@ -228,4 +230,3 @@ Le MVP est accepté lorsque :
 - intelligence artificielle et prévisions avancées.
 
 Ces éléments peuvent être ajoutés après stabilisation, sans compromettre le modèle de données initial.
-
