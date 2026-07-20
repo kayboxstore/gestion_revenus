@@ -77,7 +77,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   });
 
   await page.getByRole("link", { name: "Plus" }).click();
-  await page.getByRole("link", { name: "Activités", exact: true }).click();
+  await page.getByRole("link", { name: /^Activités/ }).click();
   const billiard = page.locator("article").filter({ hasText: "BILLIARD" });
   await billiard.locator('select[name="active"]').selectOption("true");
   await billiard.getByRole("button", { name: "Enregistrer" }).click();
