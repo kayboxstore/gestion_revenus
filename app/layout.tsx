@@ -3,11 +3,12 @@ import "./olive-future.css";
 import "./dashboard-editorial.css";
 import "./stock.css";
 import type { Metadata, Viewport } from "next";
+import { APP_BRAND } from "@/lib/brand";
 import { PwaRegister } from "./pwa-register";
 export const metadata: Metadata = {
   title: {
-    default: "KayBox Family",
-    template: "%s · KayBox Family",
+    default: APP_BRAND.name,
+    template: `%s · ${APP_BRAND.name}`,
   },
   description:
     "Pilotage familial fiable des revenus, dépenses, stock et épargne",

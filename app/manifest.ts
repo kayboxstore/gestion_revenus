@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
+import { APP_BRAND } from "@/lib/brand";
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "KayBox Family — Gestion des revenus",
-    short_name: "KayBox Family",
+    name: `${APP_BRAND.name} — Gestion des revenus`,
+    short_name: APP_BRAND.shortName,
     start_url: "/",
     display: "standalone",
     background_color: "#0c1209",
