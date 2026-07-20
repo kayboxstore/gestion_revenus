@@ -26,9 +26,11 @@ export type DashboardReference = {
   name: string;
   code?: string;
   type?: string;
+  activity_id?: string;
   currency?: string;
   target_amount?: string;
   target_date?: string | null;
+  stock_quantity?: string;
 };
 export type DashboardSale = {
   id: string;
@@ -195,6 +197,7 @@ export async function getDashboardData(
     { data: activities },
     { data: operations },
     { data: products },
+    { data: inventorySnapshot },
     { data: cashAccounts },
     { data: categories },
     { data: savingsGoals },
@@ -222,10 +225,13 @@ export async function getDashboardData(
     operationsQuery,
     supabase
       .from("products")
-      .select("id,name,type")
+      .select("id,name,type,activity_id")
       .eq("household_id", householdId)
       .eq("active", true)
       .order("name"),
+    supabase.rpc("get_inventory_snapshot", {
+      p_household_id: householdId,
+    }),
     supabase
       .from("cash_accounts")
       .select("id,name,type,currency")
@@ -278,6 +284,15 @@ export async function getDashboardData(
     supabase.rpc("get_savings_progress", { p_household_id: householdId }),
   ]);
 
+  const inventoryByProduct = new Map(
+    (
+      (inventorySnapshot ?? []) as Array<{
+        product_id: string;
+        quantity: string | number;
+      }>
+    ).map((row) => [row.product_id, String(row.quantity)]),
+  );
+
   return {
     configured: true,
     authenticated: true,
@@ -293,7 +308,13 @@ export async function getDashboardData(
       status: row.status,
       line_count: row.journal_lines?.[0]?.count ?? 0,
     })),
-    products: (products ?? []) as DashboardReference[],
+    products: (products ?? []).map((product) => ({
+      ...product,
+      stock_quantity:
+        product.type === "physical"
+          ? (inventoryByProduct.get(product.id) ?? "0.0000")
+          : undefined,
+    })) as DashboardReference[],
     cashAccounts: (cashAccounts ?? []) as DashboardReference[],
     categories: (categories ?? []) as DashboardReference[],
     savingsGoals: (savingsGoals ?? []) as DashboardReference[],

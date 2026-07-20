@@ -11,6 +11,7 @@ const pool = databaseUrl ? new Pool({ connectionString: databaseUrl }) : null;
 type References = {
   householdId: string;
   iptvProduct: string;
+  miniUpsProduct: string;
   boxProduct: string;
   cashUsd: string;
   cashCdf: string;
@@ -145,6 +146,39 @@ async function record(
   );
 }
 
+async function recordOpeningStock(
+  client: PoolClient,
+  input: {
+    productId: string;
+    quantity: string;
+    totalValue: string;
+    currency?: string;
+    rate?: string;
+    date?: string | null;
+    description?: string;
+    key?: string;
+  },
+) {
+  return one<{ id: string }>(
+    client,
+    `select record_opening_stock(
+      $1::uuid,$2::uuid,$3::numeric,$4::numeric,$5::text,$6::numeric,
+      $7::date,$8::text,$9::text
+    ) as id`,
+    [
+      refs.householdId,
+      input.productId,
+      input.quantity,
+      input.totalValue,
+      input.currency ?? "USD",
+      input.rate ?? "1",
+      input.date ?? null,
+      input.description ?? "Stock initial test",
+      input.key ?? randomUUID(),
+    ],
+  );
+}
+
 databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
   beforeAll(async () => {
     if (!pool) return;
@@ -229,6 +263,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       return {
         householdId: household.id,
         iptvProduct: product("IPTV-STD"),
+        miniUpsProduct: product("MINI-UPS"),
         boxProduct: product("ATV-BOX"),
         cashUsd: account("Caisse USD"),
         cashCdf: account("Caisse CDF"),
@@ -269,6 +304,103 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       );
       expect(lines.count).toBe("2");
       expect(movements.count).toBe("0");
+    });
+  });
+
+  it("records and reverses opening stock without changing cash or profit", async () => {
+    await asUser(ownerId, async (client) => {
+      const before = await one<{
+        revenue: string;
+        net_profit: string;
+        cash: string;
+      }>(
+        client,
+        "select revenue::text,net_profit::text,cash::text from get_dashboard_kpis($1,null,null,null)",
+        [refs.householdId],
+      );
+      const key = randomUUID();
+      const input = {
+        productId: refs.miniUpsProduct,
+        quantity: "3",
+        totalValue: "75",
+        date: "2026-07-16",
+        description: "Trois Mini UPS possédés au démarrage",
+        key,
+      };
+      const opening = await recordOpeningStock(client, input);
+      const retry = await recordOpeningStock(client, input);
+      expect(retry.id).toBe(opening.id);
+      await client.query("savepoint expected_opening_conflict");
+      await expect(
+        recordOpeningStock(client, { ...input, totalValue: "76" }),
+      ).rejects.toThrow(/idempotency key conflict/);
+      await client.query("rollback to savepoint expected_opening_conflict");
+      await client.query("release savepoint expected_opening_conflict");
+
+      const lines = await client.query<{
+        code: string;
+        debit_base: string;
+        credit_base: string;
+        cash_account_id: string | null;
+      }>(
+        `select a.code,l.debit_base::text,l.credit_base::text,l.cash_account_id
+         from journal_lines l
+         join ledger_accounts a on a.id=l.ledger_account_id
+         where l.journal_entry_id=$1 order by a.code`,
+        [opening.id],
+      );
+      expect(lines.rows).toEqual([
+        {
+          code: "equity",
+          debit_base: "0.0000",
+          credit_base: "75.0000",
+          cash_account_id: null,
+        },
+        {
+          code: "inventory",
+          debit_base: "75.0000",
+          credit_base: "0.0000",
+          cash_account_id: null,
+        },
+      ]);
+
+      const stock = await one<{
+        quantity: string;
+        value_base: string;
+        weighted_unit_cost_base: string;
+      }>(
+        client,
+        `select quantity::text,value_base::text,weighted_unit_cost_base::text
+         from get_inventory_snapshot($1) where product_id=$2`,
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      expect(stock).toEqual({
+        quantity: "3.0000",
+        value_base: "75.0000",
+        weighted_unit_cost_base: "25.0000",
+      });
+
+      const after = await one<{
+        revenue: string;
+        net_profit: string;
+        cash: string;
+      }>(
+        client,
+        "select revenue::text,net_profit::text,cash::text from get_dashboard_kpis($1,null,null,null)",
+        [refs.householdId],
+      );
+      expect(after).toEqual(before);
+
+      await client.query(
+        "select reverse_journal_entry($1,'Correction ouverture')",
+        [opening.id],
+      );
+      const reversedStock = await one<{ quantity: string }>(
+        client,
+        "select quantity::text from get_inventory_snapshot($1) where product_id=$2",
+        [refs.householdId, refs.miniUpsProduct],
+      );
+      expect(reversedStock.quantity).toBe("0.0000");
     });
   });
 
@@ -486,6 +618,14 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         ]),
       ).rejects.toThrow(/not allowed/);
     });
+
+    await asUser(readerId, async (client) => {
+      await expect(
+        client.query("select * from get_inventory_snapshot($1)", [
+          otherHouseholdId,
+        ]),
+      ).rejects.toThrow(/not allowed/);
+    });
   });
 
   it("lets operators record operations but blocks administration and reversal", async () => {
@@ -526,6 +666,15 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         client.query("select reverse_journal_entry($1,'Non autorisé')", [
           entry.id,
         ]),
+      ).rejects.toThrow(/not allowed/),
+    );
+    await asUser(operatorId, (client) =>
+      expect(
+        recordOpeningStock(client, {
+          productId: refs.miniUpsProduct,
+          quantity: "1",
+          totalValue: "25",
+        }),
       ).rejects.toThrow(/not allowed/),
     );
   });
@@ -933,6 +1082,15 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       ).rejects.toThrow(/permission denied/);
       await client.query("rollback to savepoint expected_anon_balances_error");
       await client.query("release savepoint expected_anon_balances_error");
+
+      await client.query("savepoint expected_anon_inventory_error");
+      await expect(
+        client.query("select * from get_inventory_snapshot($1)", [
+          refs.householdId,
+        ]),
+      ).rejects.toThrow(/permission denied/);
+      await client.query("rollback to savepoint expected_anon_inventory_error");
+      await client.query("release savepoint expected_anon_inventory_error");
     });
   });
 
@@ -955,6 +1113,21 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
           [refs.householdId, refs.familyCategory, refs.cashUsd],
         ),
       ).rejects.toThrow(/controlled RPC/);
+    });
+    await asUser(ownerId, async (client) => {
+      await expect(
+        client.query(
+          `insert into stock_movements(
+            household_id,product_id,location_id,type,quantity,unit_cost_base,
+            reference_type,reference_id,movement_date
+          ) values(
+            $1,$2,
+            (select id from inventory_locations where household_id=$1 and primary_location limit 1),
+            'manual',1,25,'manual',gen_random_uuid(),current_date
+          )`,
+          [refs.householdId, refs.miniUpsProduct],
+        ),
+      ).rejects.toThrow(/row-level security/);
     });
   });
 });

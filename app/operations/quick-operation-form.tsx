@@ -9,6 +9,7 @@ const types = [
   ["cash_sale", "Vente encaissée"],
   ["credit_sale", "Vente à crédit"],
   ["payment", "Encaissement créance"],
+  ["opening_stock", "Stock initial"],
   ["stock_purchase", "Achat de stock"],
   ["operating_expense", "Dépense activité"],
   ["family_expense", "Dépense familiale"],
@@ -23,7 +24,20 @@ type OperationType = (typeof types)[number][0];
 export function QuickOperationForm({ data }: { data: DashboardData }) {
   const [type, setType] = useState<OperationType>("cash_sale");
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
-  const product = ["cash_sale", "credit_sale", "stock_purchase"].includes(type);
+  const canManage = data.role === "owner" || data.role === "manager";
+  const openingStock = type === "opening_stock";
+  const visibleTypes = canManage
+    ? types
+    : types.filter(([value]) => value !== "opening_stock");
+  const product = [
+    "cash_sale",
+    "credit_sale",
+    "opening_stock",
+    "stock_purchase",
+  ].includes(type);
+  const selectableProducts = openingStock
+    ? data.products.filter((item) => item.type === "physical")
+    : data.products;
   const payment = type === "payment";
   const expense = ["operating_expense", "family_expense"].includes(type);
   const transfer = ["transfer", "savings_contribution"].includes(type);
@@ -34,7 +48,7 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
     "stock_purchase",
     "operating_expense",
   ].includes(type);
-  const sourceAccount = type !== "credit_sale";
+  const sourceAccount = !["credit_sale", "opening_stock"].includes(type);
 
   return (
     <form
@@ -51,7 +65,7 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
           className="mt-1 w-full rounded-xl border p-3"
           aria-describedby="operation-help"
         >
-          {types.map(([value, label]) => (
+          {visibleTypes.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
@@ -59,8 +73,9 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
         </select>
       </label>
       <p id="operation-help" className="text-sm text-slate-600">
-        Les champs affichés changent selon le type choisi et la même règle est
-        validée côté serveur.
+        {openingStock
+          ? "Utilisez ce choix pour les articles que vous possédiez avant de commencer l’application. Il ne touche ni la caisse, ni le revenu, ni les dépenses."
+          : "Les champs affichés changent selon le type choisi et la même règle est validée côté serveur."}
       </p>
       {activity && (
         <label className="block text-sm font-medium">
@@ -80,7 +95,7 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
       )}
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-medium">
-          Montant source
+          {openingStock ? "Valeur totale du stock" : "Montant source"}
           <input
             name="amount"
             inputMode="decimal"
@@ -118,25 +133,30 @@ export function QuickOperationForm({ data }: { data: DashboardData }) {
       {product && (
         <fieldset className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <legend className="px-1 text-sm font-semibold text-slate-700">
-            Produit ou service vendu/acheté
+            {openingStock
+              ? "Articles déjà disponibles"
+              : "Produit ou service vendu/acheté"}
           </legend>
           <label className="block text-sm font-medium">
-            Produit / offre IPTV
+            {openingStock ? "Produit physique" : "Produit / offre IPTV"}
             <select
               name="product_id"
               required
               className="mt-1 w-full rounded-xl border p-3"
             >
               <option value="">Choisir explicitement un produit</option>
-              {data.products.map((product) => (
+              {selectableProducts.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.name}
+                  {product.type === "physical"
+                    ? ` · stock ${product.stock_quantity ?? "0.0000"}`
+                    : ""}
                 </option>
               ))}
             </select>
           </label>
           <label className="block text-sm font-medium">
-            Quantité
+            {openingStock ? "Quantité déjà en stock" : "Quantité"}
             <input
               name="quantity"
               inputMode="decimal"
