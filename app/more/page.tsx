@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   cancelInvitation,
   createInvitation,
@@ -6,7 +5,17 @@ import {
   updateMemberRole,
 } from "@/app/actions/administration";
 import { signOut } from "@/app/actions/auth";
+import { AppIcon } from "@/components/app-icon";
+import { AppNavigation } from "@/components/app-navigation";
+import { PageHeading } from "@/components/page-heading";
 import { getDashboardData } from "@/lib/dashboard/queries";
+
+const roleLabels: Record<string, string> = {
+  owner: "Propriétaire",
+  manager: "Gestionnaire",
+  operator: "Opérateur",
+  reader: "Lecteur",
+};
 
 export default async function Page({
   searchParams,
@@ -18,218 +27,333 @@ export default async function Page({
   const canManage = data.role === "owner" || data.role === "manager";
   const isOwner = data.role === "owner";
   return (
-    <main className="min-h-screen bg-slate-50 p-5 text-slate-900">
-      <Link href="/" className="text-blue-700">
-        ← Accueil
-      </Link>
-      <h1 className="mt-4 text-3xl font-bold">Plus</h1>
-      {params.success && (
-        <p className="mt-4 rounded-xl border border-green-300 bg-green-50 p-3 text-green-800">
-          {params.success === "member"
-            ? "Membre mis à jour avec audit."
-            : params.success === "invitation"
-              ? "Invitation créée."
-              : params.success === "invitation_cancelled"
-                ? "Invitation annulée."
-                : "Objectif d’épargne créé. Vous pouvez maintenant enregistrer une contribution."}
-        </p>
-      )}
-      {params.error && (
-        <p
-          className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"
-          role="alert"
-        >
-          {params.error === "not_allowed"
-            ? "Votre rôle ne permet pas de gérer l’épargne."
-            : "Vérifiez les informations de l’objectif d’épargne."}
-        </p>
-      )}
-      <section className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
-        <h2 className="text-xl font-semibold">Paramètres du foyer</h2>
-        <p className="mt-2 text-slate-600">
-          {data.householdName ?? "Aucun foyer actif"} · devise USD · locale
-          fr-CD · fuseau Africa/Kinshasa.
-        </p>
-        <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">
-          <li>
-            Membres et invitations protégés par rôles :
-            owner/manager/operator/reader.
-          </li>
-          <li>Audit append-only pour onboarding, validation et annulation.</li>
-          <li>
-            Pièces jointes prévues sur stockage privé sans binaire dans Git.
-          </li>
-        </ul>
-        {data.authenticated && (
-          <form action={signOut} className="mt-4">
-            <button className="rounded-xl border px-4 py-3 font-semibold">
-              Déconnexion
-            </button>
-          </form>
-        )}
-      </section>
+    <main className="app-page more-page">
+      <div className="app-page-inner">
+        <PageHeading
+          eyebrow="Espace du foyer"
+          title="Plus"
+          description="Membres, objectifs et paramètres essentiels réunis dans un espace simple et sécurisé."
+          icon="more"
+          actions={
+            <span className="role-pill">
+              <AppIcon name="shield" className="h-4 w-4" />
+              {data.role ? roleLabels[data.role] : "Non connecté"}
+            </span>
+          }
+        />
 
-      <section className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
-        <h2 className="text-xl font-semibold">Membres, invitations et rôles</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Seul le propriétaire peut changer les rôles, désactiver un membre ou
-          annuler une invitation. Les lecteurs restent en consultation seule.
-        </p>
-        <div className="mt-4 space-y-3">
-          {data.members.map((member) => (
-            <form
-              key={member.user_id}
-              action={updateMemberRole}
-              className="grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-[1fr_150px_150px_auto]"
-            >
-              <input type="hidden" name="user_id" value={member.user_id} />
-              <p className="text-sm">
-                <b>{member.display_name ?? "Membre"}</b>
-                <br />
-                <span className="text-slate-500">{member.user_id}</span>
-              </p>
-              <label className="text-sm font-medium">
-                Rôle
-                <select
-                  name="role"
-                  defaultValue={member.role}
-                  disabled={!isOwner}
-                  className="mt-1 w-full rounded-xl border p-3"
-                >
-                  <option value="owner">Propriétaire</option>
-                  <option value="manager">Gestionnaire</option>
-                  <option value="operator">Opérateur</option>
-                  <option value="reader">Lecteur</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium">
-                Statut
-                <select
-                  name="status"
-                  defaultValue={member.status}
-                  disabled={!isOwner}
-                  className="mt-1 w-full rounded-xl border p-3"
-                >
-                  <option value="active">Actif</option>
-                  <option value="inactive">Inactif</option>
-                </select>
-              </label>
-              {isOwner && (
-                <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white">
-                  Mettre à jour
-                </button>
-              )}
-            </form>
-          ))}
-        </div>
-        {isOwner && (
-          <form
-            action={createInvitation}
-            className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px_auto]"
-          >
-            <label className="block text-sm font-medium">
-              Email invité
-              <input
-                name="email"
-                type="email"
-                required
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <label className="block text-sm font-medium">
-              Rôle
-              <select name="role" className="mt-1 w-full rounded-xl border p-3">
-                <option value="reader">Lecteur</option>
-                <option value="operator">Opérateur</option>
-                <option value="manager">Gestionnaire</option>
-              </select>
-            </label>
-            <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white">
-              Inviter
-            </button>
-          </form>
+        {params.success && (
+          <p className="status-banner status-banner-success" role="status">
+            <AppIcon name="check" className="mt-0.5 h-5 w-5 shrink-0" />
+            {params.success === "member"
+              ? "Membre mis à jour avec audit."
+              : params.success === "invitation"
+                ? "Invitation créée."
+                : params.success === "invitation_cancelled"
+                  ? "Invitation annulée."
+                  : "Objectif d’épargne créé. Vous pouvez maintenant enregistrer une contribution."}
+          </p>
         )}
-        <ul className="mt-4 space-y-2 text-sm">
-          {data.invitations.map((invitation) => (
-            <li
-              key={invitation.id}
-              className="flex items-center justify-between rounded-xl border p-3"
-            >
-              <span>
-                {invitation.email} · {invitation.role} · {invitation.status}
+        {params.error && (
+          <p className="status-banner status-banner-error" role="alert">
+            <AppIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
+            {params.error === "not_allowed"
+              ? "Votre rôle ne permet pas de gérer cet élément."
+              : "Vérifiez les informations saisies puis réessayez."}
+          </p>
+        )}
+
+        <section className="household-profile">
+          <div className="household-profile-main">
+            <span className="household-avatar">
+              {(data.householdName ?? "F").slice(0, 1).toUpperCase()}
+            </span>
+            <div>
+              <small>Foyer actif</small>
+              <h2>{data.householdName ?? "Aucun foyer actif"}</h2>
+              <p>USD · fr-CD · Africa/Kinshasa</p>
+            </div>
+          </div>
+          <div className="household-profile-stats">
+            <div>
+              <strong>{data.members.length}</strong>
+              <small>Membres</small>
+            </div>
+            <div>
+              <strong>
+                {data.activities.filter((item) => item.active).length}
+              </strong>
+              <small>Activités</small>
+            </div>
+            <div>
+              <strong>{data.savingsGoals.length}</strong>
+              <small>Objectifs</small>
+            </div>
+          </div>
+        </section>
+
+        <section className="more-grid">
+          <section className="surface-card settings-card">
+            <div className="section-title">
+              <div>
+                <h2>Paramètres du foyer</h2>
+                <p>Configuration générale et sécurité.</p>
+              </div>
+              <span className="sidebar-card-icon">
+                <AppIcon name="settings" />
               </span>
-              {isOwner && invitation.status === "pending" && (
-                <form action={cancelInvitation}>
-                  <input type="hidden" name="id" value={invitation.id} />
-                  <button className="font-semibold text-red-700">
-                    Annuler
+            </div>
+            <div className="settings-list">
+              <div>
+                <span>
+                  <AppIcon name="wallet" />
+                </span>
+                <div>
+                  <strong>Devise de base</strong>
+                  <small>Dollar américain (USD)</small>
+                </div>
+                <b>USD</b>
+              </div>
+              <div>
+                <span>
+                  <AppIcon name="calendar" />
+                </span>
+                <div>
+                  <strong>Fuseau horaire</strong>
+                  <small>Heure locale du foyer</small>
+                </div>
+                <b>Kinshasa</b>
+              </div>
+              <div>
+                <span>
+                  <AppIcon name="shield" />
+                </span>
+                <div>
+                  <strong>Protection des données</strong>
+                  <small>Isolation RLS et audit actif</small>
+                </div>
+                <b className="setting-ok">Activée</b>
+              </div>
+            </div>
+            {data.authenticated && (
+              <form action={signOut} className="settings-signout">
+                <button className="secondary-button w-full">
+                  <AppIcon name="logout" className="h-4 w-4" />
+                  Déconnexion
+                </button>
+              </form>
+            )}
+          </section>
+
+          <section className="surface-card savings-card">
+            <div className="section-title">
+              <div>
+                <h2>Objectifs d’épargne</h2>
+                <p>Transformez les projets en progrès visibles.</p>
+              </div>
+              <span className="sidebar-card-icon savings-icon">
+                <AppIcon name="target" />
+              </span>
+            </div>
+            {data.savingsGoals.length ? (
+              <ul className="savings-goal-list">
+                {data.savingsGoals.map((goal) => (
+                  <li key={goal.id}>
+                    <span>
+                      <AppIcon name="savings" />
+                    </span>
+                    <div>
+                      <strong>{goal.name}</strong>
+                      <small>
+                        Cible {goal.target_amount} {goal.currency}
+                        {goal.target_date ? ` · ${goal.target_date}` : ""}
+                      </small>
+                    </div>
+                    <AppIcon name="arrow" />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="compact-empty">
+                <AppIcon name="target" />
+                <div>
+                  <strong>Aucun objectif actif</strong>
+                  <p>Créez votre premier cap d’épargne.</p>
+                </div>
+              </div>
+            )}
+            {canManage && (
+              <details className="inline-creator">
+                <summary>
+                  <AppIcon name="plus" /> Créer un objectif
+                </summary>
+                <form action={createSavingsGoal}>
+                  <label className="field-label inline-creator-wide">
+                    Nom de l’objectif
+                    <input
+                      name="name"
+                      required
+                      className="premium-field"
+                      placeholder="Ex. Fonds d’urgence"
+                    />
+                  </label>
+                  <label className="field-label">
+                    Montant cible
+                    <input
+                      name="target_amount"
+                      inputMode="decimal"
+                      required
+                      className="premium-field"
+                    />
+                  </label>
+                  <label className="field-label">
+                    Devise
+                    <select name="currency" className="premium-field">
+                      <option>USD</option>
+                      <option>CDF</option>
+                    </select>
+                  </label>
+                  <label className="field-label inline-creator-wide">
+                    Date cible facultative
+                    <input
+                      name="target_date"
+                      type="date"
+                      className="premium-field"
+                    />
+                  </label>
+                  <button className="premium-button inline-creator-wide">
+                    Créer l’objectif
                   </button>
                 </form>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="mt-6 rounded-2xl border bg-white p-4 shadow-sm">
-        <h2 className="text-xl font-semibold">Objectifs d’épargne</h2>
-        {data.savingsGoals.length ? (
-          <ul className="mt-3 space-y-2">
-            {data.savingsGoals.map((goal) => (
-              <li key={goal.id} className="rounded-xl bg-slate-50 p-3">
-                <b>{goal.name}</b> · cible {goal.target_amount} {goal.currency}
-                {goal.target_date ? ` · ${goal.target_date}` : ""}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-slate-600">Aucun objectif actif.</p>
-        )}
-        {canManage && (
-          <form
-            action={createSavingsGoal}
-            className="mt-4 grid gap-3 sm:grid-cols-2"
-          >
-            <label className="block text-sm font-medium sm:col-span-2">
-              Nom de l’objectif
-              <input
-                name="name"
-                required
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <label className="block text-sm font-medium">
-              Montant cible
-              <input
-                name="target_amount"
-                inputMode="decimal"
-                required
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <label className="block text-sm font-medium">
-              Devise
-              <select
-                name="currency"
-                className="mt-1 w-full rounded-xl border p-3"
+              </details>
+            )}
+          </section>
+        </section>
+
+        <section className="surface-card members-card">
+          <div className="section-title">
+            <div>
+              <h2>Membres, invitations et rôles</h2>
+              <p>Chacun voit et fait uniquement ce que son rôle autorise.</p>
+            </div>
+            <span className="sidebar-card-icon members-icon">
+              <AppIcon name="members" />
+            </span>
+          </div>
+
+          <div className="member-list">
+            {data.members.map((member) => (
+              <form
+                key={member.user_id}
+                action={updateMemberRole}
+                className="member-card"
               >
-                <option>USD</option>
-                <option>CDF</option>
-              </select>
-            </label>
-            <label className="block text-sm font-medium sm:col-span-2">
-              Date cible facultative
-              <input
-                name="target_date"
-                type="date"
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white sm:col-span-2">
-              Créer l’objectif
-            </button>
-          </form>
-        )}
-      </section>
+                <input type="hidden" name="user_id" value={member.user_id} />
+                <div className="member-identity">
+                  <span>
+                    {(member.display_name ?? "M").slice(0, 1).toUpperCase()}
+                  </span>
+                  <div>
+                    <strong>{member.display_name ?? "Membre"}</strong>
+                    <small>{member.user_id}</small>
+                  </div>
+                </div>
+                <label className="field-label">
+                  Rôle
+                  <select
+                    name="role"
+                    defaultValue={member.role}
+                    disabled={!isOwner}
+                    className="premium-field"
+                  >
+                    <option value="owner">Propriétaire</option>
+                    <option value="manager">Gestionnaire</option>
+                    <option value="operator">Opérateur</option>
+                    <option value="reader">Lecteur</option>
+                  </select>
+                </label>
+                <label className="field-label">
+                  Statut
+                  <select
+                    name="status"
+                    defaultValue={member.status}
+                    disabled={!isOwner}
+                    className="premium-field"
+                  >
+                    <option value="active">Actif</option>
+                    <option value="inactive">Inactif</option>
+                  </select>
+                </label>
+                {isOwner && (
+                  <button className="secondary-button">Mettre à jour</button>
+                )}
+              </form>
+            ))}
+          </div>
+
+          {isOwner && (
+            <form action={createInvitation} className="invitation-form">
+              <div className="invitation-heading">
+                <span>
+                  <AppIcon name="plus" />
+                </span>
+                <div>
+                  <strong>Inviter une personne</strong>
+                  <small>L’invitation reste révocable.</small>
+                </div>
+              </div>
+              <label className="field-label">
+                Email invité
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="premium-field"
+                  placeholder="membre@exemple.com"
+                />
+              </label>
+              <label className="field-label">
+                Rôle
+                <select name="role" className="premium-field">
+                  <option value="reader">Lecteur</option>
+                  <option value="operator">Opérateur</option>
+                  <option value="manager">Gestionnaire</option>
+                </select>
+              </label>
+              <button className="premium-button">Inviter</button>
+            </form>
+          )}
+
+          {data.invitations.length > 0 && (
+            <div className="pending-invitations">
+              <h3>Invitations en cours</h3>
+              <ul>
+                {data.invitations.map((invitation) => (
+                  <li key={invitation.id}>
+                    <span>
+                      <AppIcon name="user" />
+                    </span>
+                    <div>
+                      <strong>{invitation.email}</strong>
+                      <small>
+                        {roleLabels[invitation.role] ?? invitation.role} ·{" "}
+                        {invitation.status}
+                      </small>
+                    </div>
+                    {isOwner && invitation.status === "pending" && (
+                      <form action={cancelInvitation}>
+                        <input type="hidden" name="id" value={invitation.id} />
+                        <button>Annuler</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </div>
+      <AppNavigation />
     </main>
   );
 }

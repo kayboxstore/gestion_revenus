@@ -65,6 +65,10 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     .locator("strong");
   await expect(revenueCard).toContainText("12");
   await expect(page.getByText("cash_sale", { exact: false })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/screens/dashboard-mobile.png",
+    fullPage: true,
+  });
 
   await page.getByRole("link", { name: "Activités" }).click();
   const billiard = page.locator("article").filter({ hasText: "BILLIARD" });
@@ -74,6 +78,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
 
   await page.getByRole("link", { name: "Accueil" }).click();
   await page.getByRole("link", { name: "Plus" }).click();
+  await page.locator("details.inline-creator summary").click();
   await page.getByLabel("Nom de l’objectif").fill("Urgences E2E");
   await page.getByLabel("Montant cible").fill("100");
   await page.getByRole("button", { name: "Créer l’objectif" }).click();
@@ -111,6 +116,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     .locator("li")
     .filter({ hasText: "savings_contribution" })
     .first();
+  await savingsEntry.locator("summary").click();
   await savingsEntry.getByLabel("Motif d’annulation").fill("Correction E2E");
   await savingsEntry
     .getByRole("button", { name: "Annuler l’écriture" })
@@ -145,11 +151,8 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
       "Stock initial enregistré sans modifier la caisse ni le résultat.",
     ),
   ).toBeVisible();
-  const miniUpsStock = page
-    .getByRole("heading", { name: "Stock disponible" })
-    .locator("..")
-    .locator("li")
-    .filter({ hasText: "Mini UPS" });
+  const stockCard = page.locator("section.stock-card");
+  const miniUpsStock = stockCard.locator("li").filter({ hasText: "Mini UPS" });
   await expect(miniUpsStock.locator("strong")).toContainText("2");
 
   await page.locator('select[name="operation_type"]').selectOption("cash_sale");
@@ -171,13 +174,12 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await page.getByRole("button", { name: "Valider l’opération" }).click();
   await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
   await expect(
-    page
-      .getByRole("heading", { name: "Stock disponible" })
-      .locator("..")
-      .locator("li")
-      .filter({ hasText: "Mini UPS" })
-      .locator("strong"),
+    stockCard.locator("li").filter({ hasText: "Mini UPS" }).locator("strong"),
   ).toContainText("1");
+  await page.screenshot({
+    path: "test-results/screens/operations-mobile.png",
+    fullPage: true,
+  });
 });
 
 test("administre les rôles et exporte les rapports authentifiés", async ({
@@ -235,6 +237,10 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   await expect(page.getByText("Marge par activité")).toBeVisible();
   await expect(page.getByText("Dépenses par catégorie")).toBeVisible();
   await expect(page.getByText("Créances clients")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/screens/reports-mobile.png",
+    fullPage: true,
+  });
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("link", { name: "Exporter CSV côté serveur" }).click();
   const download = await downloadPromise;

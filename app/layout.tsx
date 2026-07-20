@@ -2,7 +2,10 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { PwaRegister } from "./pwa-register";
 export const metadata: Metadata = {
-  title: "Gestion des revenus",
+  title: {
+    default: "KayBox Family",
+    template: "%s · KayBox Family",
+  },
   description:
     "Pilotage familial fiable des revenus, dépenses, stock et épargne",
   manifest: "/manifest.webmanifest",
@@ -10,7 +13,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f2742",
+  themeColor: "#0b1f38",
 };
 export default function RootLayout({
   children,

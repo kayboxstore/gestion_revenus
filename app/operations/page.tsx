@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { reverseOperation } from "@/app/actions/administration";
+import { AppIcon } from "@/components/app-icon";
+import { AppNavigation } from "@/components/app-navigation";
+import { PageHeading } from "@/components/page-heading";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { QuickOperationForm } from "./quick-operation-form";
 
@@ -22,6 +25,24 @@ const errorMessages: Record<string, string> = {
   reversal_failed: "L’écriture n’a pas pu être annulée.",
 };
 
+const operationLabels: Record<string, string> = {
+  cash_sale: "Vente encaissée",
+  credit_sale: "Vente à crédit",
+  payment: "Paiement reçu",
+  opening_stock: "Stock initial",
+  stock_purchase: "Achat de stock",
+  operating_expense: "Dépense activité",
+  family_expense: "Dépense familiale",
+  transfer: "Transfert",
+  family_contribution: "Apport familial",
+  family_withdrawal: "Retrait familial",
+  savings_contribution: "Épargne",
+};
+
+function isZeroQuantity(quantity?: string) {
+  return !quantity || /^0(?:\.0+)?$/.test(quantity);
+}
+
 export default async function Page({
   searchParams,
 }: {
@@ -34,104 +55,181 @@ export default async function Page({
     (product) => product.type === "physical",
   );
   return (
-    <main className="min-h-screen bg-slate-50 p-5 pb-24 text-slate-900">
-      <Link href="/" className="text-blue-700">
-        ← Accueil
-      </Link>
-      <h1 className="mt-4 text-3xl font-bold">Opérations</h1>
-      <p className="mt-2 text-slate-600">
-        Saisissez une opération réelle. La validation passe par une RPC
-        PostgreSQL atomique qui crée une écriture équilibrée.
-      </p>
-      {params.success && (
-        <p className="mt-4 rounded-xl border border-green-300 bg-green-50 p-3 text-green-800">
-          {params.success === "reversed"
-            ? "Écriture annulée par une écriture inverse traçable."
-            : params.success === "opening_stock"
-              ? "Stock initial enregistré sans modifier la caisse ni le résultat."
-              : "Opération validée et persistée."}
-        </p>
-      )}
-      {params.error && (
-        <p className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800">
-          {errorMessages[params.error] ?? errorMessages.operation_failed}
-        </p>
-      )}
-      {!data.authenticated ? (
-        <Link
-          href="/login"
-          className="mt-6 inline-block rounded-xl bg-night px-4 py-3 font-semibold text-white"
-        >
-          Se connecter
-        </Link>
-      ) : !data.householdName ? (
-        <Link
-          href="/onboarding"
-          className="mt-6 inline-block rounded-xl bg-night px-4 py-3 font-semibold text-white"
-        >
-          Créer le foyer
-        </Link>
-      ) : (
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <QuickOperationForm data={data} />
-          <aside className="space-y-4">
-            <section className="rounded-2xl border bg-white p-4 shadow-sm">
-              <h2 className="text-xl font-semibold">Stock disponible</h2>
-              {physicalProducts.length ? (
-                <ul className="mt-3 space-y-2 text-sm">
-                  {physicalProducts.map((product) => (
-                    <li
-                      key={product.id}
-                      className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3"
-                    >
-                      <span>{product.name}</span>
-                      <strong className="tabular-nums">
-                        {product.stock_quantity ?? "0.0000"}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-sm text-slate-600">
-                  Aucun produit physique actif.
-                </p>
-              )}
-            </section>
-            <section className="rounded-2xl border bg-white p-4 shadow-sm">
-              <h2 className="text-xl font-semibold">Dernières écritures</h2>
-              <ul className="mt-3 space-y-2 text-sm">
-                {data.operations.map((op) => (
-                  <li key={op.number} className="rounded-xl bg-slate-50 p-3">
-                    <b>{op.number}</b> · {op.type}
-                    <br />
-                    {op.status} · {op.line_count} lignes
-                    {canManage && op.status === "posted" && (
-                      <form
-                        action={reverseOperation}
-                        className="mt-3 space-y-2"
-                      >
-                        <input type="hidden" name="entry_id" value={op.id} />
-                        <label className="block font-medium text-red-800">
-                          Motif d’annulation
-                          <input
-                            name="reason"
-                            required
-                            minLength={3}
-                            className="mt-1 w-full rounded-lg border border-red-200 bg-white p-2 text-slate-900"
+    <main className="app-page operations-page">
+      <div className="app-page-inner">
+        <PageHeading
+          eyebrow="Centre de saisie"
+          title="Opérations"
+          description="Une expérience guidée qui transforme chaque action en écriture fiable, équilibrée et traçable."
+          icon="operations"
+          actions={
+            <span className="security-pill">
+              <AppIcon name="shield" className="h-4 w-4" />
+              Sécurisé par RLS
+            </span>
+          }
+        />
+
+        {params.success && (
+          <p className="status-banner status-banner-success" role="status">
+            <AppIcon name="check" className="mt-0.5 h-5 w-5 shrink-0" />
+            {params.success === "reversed"
+              ? "Écriture annulée par une écriture inverse traçable."
+              : params.success === "opening_stock"
+                ? "Stock initial enregistré sans modifier la caisse ni le résultat."
+                : "Opération validée et persistée."}
+          </p>
+        )}
+        {params.error && (
+          <p className="status-banner status-banner-error" role="alert">
+            <AppIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
+            {errorMessages[params.error] ?? errorMessages.operation_failed}
+          </p>
+        )}
+        {!data.authenticated ? (
+          <section className="empty-state surface-card">
+            <span>
+              <AppIcon name="user" />
+            </span>
+            <strong>Connectez-vous pour continuer</strong>
+            <p>Vos opérations restent isolées dans votre foyer.</p>
+            <Link href="/login" className="premium-button">
+              Se connecter
+            </Link>
+          </section>
+        ) : !data.householdName ? (
+          <section className="empty-state surface-card">
+            <span>
+              <AppIcon name="family" />
+            </span>
+            <strong>Créez d’abord votre foyer</strong>
+            <p>
+              L’assistant prépare les comptes, activités et devises initiales.
+            </p>
+            <Link href="/onboarding" className="premium-button">
+              Créer le foyer
+            </Link>
+          </section>
+        ) : (
+          <section className="operations-layout">
+            <QuickOperationForm data={data} initialType={params.type} />
+            <aside className="operations-sidebar">
+              <section className="surface-card sidebar-card stock-card">
+                <div className="section-title">
+                  <div>
+                    <h2>Stock disponible</h2>
+                    <p>Quantités en temps réel.</p>
+                  </div>
+                  <span className="sidebar-card-icon">
+                    <AppIcon name="box" />
+                  </span>
+                </div>
+                {physicalProducts.length ? (
+                  <ul className="stock-list">
+                    {physicalProducts.map((product) => (
+                      <li key={product.id}>
+                        <span className="stock-product-icon">
+                          <AppIcon name="box" />
+                        </span>
+                        <div>
+                          <strong>{product.name}</strong>
+                          <small>
+                            {isZeroQuantity(product.stock_quantity)
+                              ? "À approvisionner"
+                              : "Disponible"}
+                          </small>
+                        </div>
+                        <strong
+                          className="tabular-nums"
+                          data-empty={
+                            isZeroQuantity(product.stock_quantity) || undefined
+                          }
+                        >
+                          {product.stock_quantity ?? "0.0000"}
+                        </strong>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="sidebar-empty">Aucun produit physique actif.</p>
+                )}
+              </section>
+
+              <section className="surface-card sidebar-card recent-operations-card">
+                <div className="section-title">
+                  <div>
+                    <h2>Dernières écritures</h2>
+                    <p>Validation et annulation tracées.</p>
+                  </div>
+                  <span className="sidebar-card-icon">
+                    <AppIcon name="reports" />
+                  </span>
+                </div>
+                {data.operations.length ? (
+                  <ul className="operations-journal-list">
+                    {data.operations.map((operation) => (
+                      <li key={operation.number}>
+                        <div className="journal-row">
+                          <span
+                            className="journal-status-dot"
+                            data-status={operation.status}
                           />
-                        </label>
-                        <button className="rounded-lg border border-red-300 px-3 py-2 font-semibold text-red-800">
-                          Annuler l’écriture
-                        </button>
-                      </form>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </aside>
-        </section>
-      )}
+                          <div>
+                            <strong>
+                              {operationLabels[operation.type] ??
+                                operation.type}
+                            </strong>
+                            <small>
+                              {operation.number} · {operation.type}
+                            </small>
+                          </div>
+                          <span>
+                            {operation.status === "posted"
+                              ? "Validée"
+                              : operation.status}
+                          </span>
+                        </div>
+                        <p>
+                          {operation.line_count} lignes comptables équilibrées
+                        </p>
+                        {canManage && operation.status === "posted" && (
+                          <details className="reversal-panel">
+                            <summary>Annuler cette écriture</summary>
+                            <form action={reverseOperation}>
+                              <input
+                                type="hidden"
+                                name="entry_id"
+                                value={operation.id}
+                              />
+                              <label className="field-label">
+                                Motif d’annulation
+                                <input
+                                  name="reason"
+                                  required
+                                  minLength={3}
+                                  className="premium-field"
+                                />
+                              </label>
+                              <button className="danger-button w-full">
+                                Annuler l’écriture
+                              </button>
+                            </form>
+                          </details>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="sidebar-empty">
+                    Votre première écriture apparaîtra ici.
+                  </p>
+                )}
+              </section>
+            </aside>
+          </section>
+        )}
+      </div>
+      <AppNavigation />
     </main>
   );
 }

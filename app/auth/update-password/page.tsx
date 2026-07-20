@@ -1,4 +1,5 @@
 import { updatePassword } from "@/app/actions/auth";
+import { AppIcon, BrandMark } from "@/components/app-icon";
 
 export default async function UpdatePasswordPage({
   searchParams,
@@ -7,33 +8,50 @@ export default async function UpdatePasswordPage({
 }) {
   const params = await searchParams;
   return (
-    <main className="mx-auto max-w-md p-5">
-      <h1 className="text-3xl font-bold">Nouveau mot de passe</h1>
-      {params.error && (
-        <p
-          className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"
-          role="alert"
-        >
-          Le mot de passe doit contenir au moins 8 caractères.
+    <main className="onboarding-page">
+      <section className="auth-form-card password-card">
+        <div className="auth-mobile-brand password-brand">
+          <BrandMark className="h-11 w-11" />
+          <strong>KayBox Family</strong>
+        </div>
+        <p className="auth-eyebrow">Sécurité du compte</p>
+        <h1>Nouveau mot de passe</h1>
+        <p className="auth-subtitle">
+          Choisissez une phrase secrète unique pour protéger les données du
+          foyer.
         </p>
-      )}
-      <form action={updatePassword} className="mt-6 space-y-4">
-        <label className="block">
-          Nouveau mot de passe
-          <input
-            name="password"
-            type="password"
-            minLength={8}
-            maxLength={128}
-            required
-            autoComplete="new-password"
-            className="mt-1 w-full rounded-xl border p-3"
-          />
-        </label>
-        <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white">
-          Enregistrer
-        </button>
-      </form>
+        {params.error && (
+          <p
+            className="status-banner status-banner-error auth-message"
+            role="alert"
+          >
+            <AppIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
+            Le mot de passe doit contenir au moins 8 caractères.
+          </p>
+        )}
+        <form action={updatePassword} className="auth-form">
+          <label className="field-label">
+            Nouveau mot de passe
+            <span className="auth-input-wrap">
+              <AppIcon name="shield" />
+              <input
+                name="password"
+                type="password"
+                minLength={8}
+                maxLength={128}
+                required
+                autoComplete="new-password"
+                className="premium-field"
+                placeholder="8 caractères minimum"
+              />
+            </span>
+          </label>
+          <button className="premium-button auth-submit">
+            Enregistrer
+            <AppIcon name="check" className="h-4 w-4" />
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

@@ -1,11 +1,37 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
+import { AppIcon, BrandMark, type AppIconName } from "@/components/app-icon";
+import { AppNavigation } from "@/components/app-navigation";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { formatMoney } from "@/lib/finance/money";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const periods = [
+  ["today", "Aujourd’hui"],
+  ["week", "Semaine"],
+  ["month", "Mois"],
+  ["quarter", "Trimestre"],
+  ["year", "Année"],
+  ["all", "Tout"],
+] as const;
+
+const operationLabels: Record<string, string> = {
+  cash_sale: "Vente encaissée",
+  credit_sale: "Vente à crédit",
+  payment: "Encaissement",
+  opening_stock: "Stock initial",
+  stock_purchase: "Achat de stock",
+  operating_expense: "Dépense d’activité",
+  family_expense: "Dépense familiale",
+  transfer: "Transfert",
+  family_contribution: "Apport familial",
+  family_withdrawal: "Retrait familial",
+  savings_contribution: "Épargne",
+  reversal: "Annulation",
+};
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -37,6 +63,26 @@ function periodRange(period: string, customFrom?: string, customTo?: string) {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
+function activityIcon(code: string): AppIconName {
+  if (code === "IPTV") return "signal";
+  if (code === "ANDROID_TV_BOX") return "tv";
+  if (code === "BILLIARD") return "billiard";
+  return "box";
+}
+
+function operationIcon(type: string): AppIconName {
+  if (type.includes("sale")) return "sale";
+  if (type.includes("expense") || type.includes("withdrawal")) return "expense";
+  if (type.includes("stock")) return "box";
+  if (type.includes("saving")) return "savings";
+  if (type === "transfer") return "transfer";
+  return "income";
+}
+
+function isZeroQuantity(quantity?: string) {
+  return !quantity || /^0(?:\.0+)?$/.test(quantity);
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -60,237 +106,455 @@ export default async function Home({
       ? params.activity
       : null;
   const data = await getDashboardData({ ...range, activityId });
-  const cards = [
-    ["Chiffre d’affaires", data.kpis.revenue],
-    ["Bénéfice brut", data.kpis.gross_profit],
-    ["Bénéfice net", data.kpis.net_profit],
-    ["Dépenses familiales", data.kpis.family_expenses],
-    ["Épargne", data.kpis.savings],
-    ["Trésorerie", data.kpis.cash],
+  const cards: Array<{
+    label: string;
+    value: string;
+    icon: AppIconName;
+    tone: string;
+    detail: string;
+  }> = [
+    {
+      label: "Chiffre d’affaires",
+      value: data.kpis.revenue,
+      icon: "trend",
+      tone: "blue",
+      detail: "Ventes validées",
+    },
+    {
+      label: "Bénéfice brut",
+      value: data.kpis.gross_profit,
+      icon: "profit",
+      tone: "mint",
+      detail: "Après coût des ventes",
+    },
+    {
+      label: "Bénéfice net",
+      value: data.kpis.net_profit,
+      icon: "wallet",
+      tone: "navy",
+      detail: "Résultat d’activité",
+    },
+    {
+      label: "Dépenses familiales",
+      value: data.kpis.family_expenses,
+      icon: "expense",
+      tone: "amber",
+      detail: "Séparées du résultat",
+    },
+    {
+      label: "Épargne",
+      value: data.kpis.savings,
+      icon: "savings",
+      tone: "violet",
+      detail: "Contributions nettes",
+    },
   ];
-  return (
-    <main className="min-h-screen bg-slate-50 pb-28 text-slate-900">
-      <section className="bg-night px-5 py-6 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm opacity-80">
-              {data.householdName ?? "Foyer non initialisé"} · Africa/Kinshasa ·
-              USD/CDF
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">Tableau de bord</h1>
-            <p className="mt-2 max-w-2xl text-sm text-blue-100">
-              Les indicateurs sont lus depuis Supabase et calculés par RPC à
-              partir des écritures validées du foyer connecté.
-            </p>
-          </div>
-          {data.authenticated ? (
-            <form action={signOut}>
-              <button className="rounded-xl border border-white/40 px-3 py-2 text-sm">
-                Déconnexion
-              </button>
-            </form>
-          ) : (
-            <Link
-              className="rounded-xl border border-white/40 px-3 py-2 text-sm"
-              href="/login"
-            >
-              Connexion
-            </Link>
-          )}
-        </div>
-      </section>
+  const activeActivities = data.activities.filter(
+    (activity) => activity.active,
+  );
+  const outOfStockProducts = data.products.filter(
+    (product) =>
+      product.type === "physical" && isZeroQuantity(product.stock_quantity),
+  );
+  const quickActions: Array<{
+    label: string;
+    detail: string;
+    href: string;
+    icon: AppIconName;
+    tone: string;
+  }> = [
+    {
+      label: "Vente",
+      detail: "Encaisser maintenant",
+      href: "/operations?type=cash_sale",
+      icon: "sale",
+      tone: "blue",
+    },
+    {
+      label: "Dépense",
+      detail: "Activité ou famille",
+      href: "/operations?type=operating_expense",
+      icon: "expense",
+      tone: "coral",
+    },
+    {
+      label: "Stock",
+      detail: "Acheter ou initialiser",
+      href: "/operations?type=stock_purchase",
+      icon: "box",
+      tone: "amber",
+    },
+    {
+      label: "Transfert",
+      detail: "Entre deux comptes",
+      href: "/operations?type=transfer",
+      icon: "transfer",
+      tone: "cyan",
+    },
+    {
+      label: "Épargner",
+      detail: "Faire progresser un objectif",
+      href: "/operations?type=savings_contribution",
+      icon: "savings",
+      tone: "violet",
+    },
+    {
+      label: "À crédit",
+      detail: "Créer une créance",
+      href: "/operations?type=credit_sale",
+      icon: "calendar",
+      tone: "navy",
+    },
+  ];
 
-      {!data.configured && (
-        <section className="px-4 py-4">
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+  function periodHref(value: string) {
+    const query = new URLSearchParams({ period: value });
+    if (activityId) query.set("activity", activityId);
+    return `/?${query.toString()}`;
+  }
+
+  return (
+    <main className="app-page dashboard-page">
+      <div className="app-page-inner">
+        <section className="dashboard-hero animate-enter">
+          <div className="dashboard-hero-top">
+            <div className="dashboard-brand">
+              <BrandMark className="h-11 w-11" />
+              <div>
+                <p>KayBox Family</p>
+                <strong>{data.householdName ?? "Gestion des revenus"}</strong>
+              </div>
+            </div>
+            {data.authenticated ? (
+              <form action={signOut}>
+                <button className="hero-icon-button" aria-label="Déconnexion">
+                  <AppIcon name="logout" />
+                </button>
+              </form>
+            ) : (
+              <Link className="hero-login-button" href="/login">
+                Connexion
+              </Link>
+            )}
+          </div>
+
+          <div className="dashboard-balance">
+            <p>Trésorerie disponible</p>
+            <h1>{formatMoney(data.kpis.cash)}</h1>
+            <span>
+              <AppIcon name="shield" className="h-4 w-4" />
+              Calculée depuis les écritures validées
+            </span>
+          </div>
+
+          <div className="dashboard-hero-footer">
+            <div>
+              <small>Résultat net</small>
+              <strong>{formatMoney(data.kpis.net_profit)}</strong>
+            </div>
+            <div>
+              <small>Activités actives</small>
+              <strong>{activeActivities.length}</strong>
+            </div>
+            <div>
+              <small>Créances ouvertes</small>
+              <strong>{data.openSales.length}</strong>
+            </div>
+          </div>
+          <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
+          <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
+        </section>
+
+        {!data.configured && (
+          <section className="status-banner status-banner-info mt-4">
+            <AppIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
             Configurez Supabase avec `.env.local` pour activer les données
             réelles.
-          </div>
-        </section>
-      )}
-      {data.configured && data.authenticated && !data.householdName && (
-        <section className="px-4 py-4">
-          <Link
-            href="/onboarding"
-            className="block rounded-2xl border bg-white p-4 font-semibold text-electric"
-          >
-            Créer le premier foyer
-          </Link>
-        </section>
-      )}
+          </section>
+        )}
+        {data.configured && data.authenticated && !data.householdName && (
+          <section className="mt-4">
+            <Link href="/onboarding" className="onboarding-callout">
+              <span className="quick-action-icon" data-tone="blue">
+                <AppIcon name="family" />
+              </span>
+              <span>
+                <strong>Créer le premier foyer</strong>
+                <small>Deux minutes pour tout initialiser</small>
+              </span>
+              <AppIcon name="arrow" />
+            </Link>
+          </section>
+        )}
 
-      {data.authenticated && data.householdName && (
-        <section className="px-4 pt-5">
-          <form
-            className="grid gap-3 rounded-2xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5"
-            method="get"
-          >
-            <label className="text-sm font-medium">
-              Période
-              <select
-                name="period"
-                defaultValue={period}
-                className="mt-1 w-full rounded-xl border p-3"
+        {data.authenticated && data.householdName && (
+          <>
+            <section className="dashboard-toolbar animate-enter">
+              <nav
+                className="period-switcher"
+                aria-label="Période du tableau de bord"
               >
-                <option value="today">Aujourd’hui</option>
-                <option value="week">Cette semaine</option>
-                <option value="month">Ce mois</option>
-                <option value="quarter">Ce trimestre</option>
-                <option value="year">Cette année</option>
-                <option value="custom">Intervalle personnalisé</option>
-                <option value="all">Toute la période</option>
-              </select>
-            </label>
-            <label className="text-sm font-medium">
-              Activité
-              <select
-                name="activity"
-                defaultValue={activityId ?? ""}
-                className="mt-1 w-full rounded-xl border p-3"
-              >
-                <option value="">Toutes les activités</option>
-                {data.activities.map((activity) => (
-                  <option key={activity.id} value={activity.id}>
-                    {activity.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-medium">
-              Du
-              <input
-                name="from"
-                type="date"
-                defaultValue={params.from ?? ""}
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <label className="text-sm font-medium">
-              Au
-              <input
-                name="to"
-                type="date"
-                defaultValue={params.to ?? ""}
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <button className="self-end rounded-xl bg-night px-4 py-3 font-semibold text-white">
-              Appliquer
-            </button>
-          </form>
-        </section>
-      )}
-
-      <section className="grid gap-3 px-4 py-5 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map(([label, value]) => (
-          <article
-            key={label}
-            className="rounded-2xl border bg-white p-4 shadow-sm"
-          >
-            <p className="text-sm text-slate-600">{label}</p>
-            <strong className="tabular mt-2 block text-2xl">
-              {formatMoney(value)}
-            </strong>
-          </article>
-        ))}
-      </section>
-
-      <section className="px-4">
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="text-xl font-semibold">Ajouter rapidement</h2>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[
-              "Vente",
-              "Entrée",
-              "Dépense",
-              "Achat",
-              "Transfert",
-              "Apport",
-              "Retrait",
-              "Épargne",
-            ].map((x) => (
-              <Link
-                className="focus-ring rounded-xl border border-slate-300 px-3 py-3 text-left font-medium hover:bg-slate-50"
-                key={x}
-                href="/operations"
-              >
-                {x}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 px-4 py-5 lg:grid-cols-2">
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="text-xl font-semibold">Activités</h2>
-          {data.activities.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-600">
-              Aucune activité. Lancez l’onboarding pour créer IPTV, Mini UPS,
-              Android TV Box et Billard inactif.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {data.activities.map((a) => (
-                <li
-                  className="flex items-center justify-between rounded-xl bg-slate-50 p-3"
-                  key={a.code}
-                >
-                  <span>{a.name}</span>
-                  <span
-                    className={a.active ? "text-green-700" : "text-amber-700"}
+                {periods.map(([value, label]) => (
+                  <Link
+                    key={value}
+                    href={periodHref(value)}
+                    data-active={period === value || undefined}
+                    aria-current={period === value ? "page" : undefined}
                   >
-                    {a.active ? "Active" : "Inactive"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="rounded-2xl border bg-white p-4">
-          <h2 className="text-xl font-semibold">Dernières opérations</h2>
-          {data.operations.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-600">
-              Aucune écriture validée pour cette période.
-            </p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm">
-              {data.operations.map((e) => (
-                <li className="rounded-xl bg-slate-50 p-3" key={e.number}>
-                  <span className="font-medium">
-                    {e.number} · {e.type}
-                  </span>
-                  <span className="ml-2 text-green-700">{e.status}</span>
-                  <span className="block text-slate-600">
-                    {e.line_count} lignes équilibrées
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+              <details className="dashboard-filter-panel">
+                <summary>
+                  <AppIcon name="calendar" className="h-4 w-4" />
+                  Filtres
+                </summary>
+                <form method="get">
+                  <input type="hidden" name="period" value="custom" />
+                  <label className="field-label">
+                    Activité
+                    <select
+                      name="activity"
+                      defaultValue={activityId ?? ""}
+                      className="premium-field"
+                    >
+                      <option value="">Toutes les activités</option>
+                      {data.activities.map((activity) => (
+                        <option key={activity.id} value={activity.id}>
+                          {activity.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="field-label">
+                      Du
+                      <input
+                        name="from"
+                        type="date"
+                        defaultValue={params.from ?? ""}
+                        className="premium-field"
+                      />
+                    </label>
+                    <label className="field-label">
+                      Au
+                      <input
+                        name="to"
+                        type="date"
+                        defaultValue={params.to ?? ""}
+                        className="premium-field"
+                      />
+                    </label>
+                  </div>
+                  <button className="premium-button w-full">
+                    Appliquer le filtre
+                  </button>
+                </form>
+              </details>
+            </section>
 
-      <nav
-        aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t bg-white text-center text-xs shadow-lg"
-      >
-        <Link className="p-3 font-semibold text-electric" href="/">
-          Accueil
-        </Link>
-        <Link className="p-3" href="/operations">
-          Opérations
-        </Link>
-        <Link className="p-3" href="/activities">
-          Activités
-        </Link>
-        <Link className="p-3" href="/reports">
-          Rapports
-        </Link>
-        <Link className="p-3" href="/more">
-          Plus
-        </Link>
-      </nav>
+            <section
+              className="kpi-grid animate-enter"
+              aria-label="Indicateurs financiers"
+            >
+              {cards.map((card) => (
+                <article
+                  key={card.label}
+                  className="kpi-card"
+                  data-tone={card.tone}
+                >
+                  <span className="kpi-icon">
+                    <AppIcon name={card.icon} />
+                  </span>
+                  <p>{card.label}</p>
+                  <strong className="tabular">{formatMoney(card.value)}</strong>
+                  <small>{card.detail}</small>
+                </article>
+              ))}
+            </section>
+
+            <section className="dashboard-section surface-card animate-enter">
+              <div className="section-title">
+                <div>
+                  <h2>Ajouter en un geste</h2>
+                  <p>
+                    Choisissez l’intention, l’application adapte le formulaire.
+                  </p>
+                </div>
+                <Link className="section-link" href="/operations">
+                  Tout voir <AppIcon name="arrow" className="h-4 w-4" />
+                </Link>
+              </div>
+              <div className="quick-action-grid">
+                {quickActions.map((action) => (
+                  <Link
+                    key={action.label}
+                    href={action.href}
+                    className="quick-action-card"
+                  >
+                    <span className="quick-action-icon" data-tone={action.tone}>
+                      <AppIcon name={action.icon} />
+                    </span>
+                    <span>
+                      <strong>{action.label}</strong>
+                      <small>{action.detail}</small>
+                    </span>
+                    <AppIcon name="arrow" className="quick-action-arrow" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            <section className="dashboard-content-grid">
+              <div className="space-y-4">
+                <section className="dashboard-section surface-card animate-enter">
+                  <div className="section-title">
+                    <div>
+                      <h2>À surveiller</h2>
+                      <p>Les éléments qui méritent votre attention.</p>
+                    </div>
+                    <span className="attention-count">
+                      {outOfStockProducts.length + data.openSales.length}
+                    </span>
+                  </div>
+                  {outOfStockProducts.length === 0 &&
+                  data.openSales.length === 0 ? (
+                    <div className="all-clear-state">
+                      <span>
+                        <AppIcon name="check" />
+                      </span>
+                      <div>
+                        <strong>Tout est sous contrôle</strong>
+                        <p>Aucune alerte critique pour le moment.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="attention-list">
+                      {outOfStockProducts.slice(0, 3).map((product) => (
+                        <Link
+                          key={product.id}
+                          href="/operations?type=opening_stock"
+                          className="attention-item"
+                        >
+                          <span data-level="warning">
+                            <AppIcon name="box" />
+                          </span>
+                          <div>
+                            <strong>{product.name}</strong>
+                            <small>
+                              Stock à zéro · approvisionner maintenant
+                            </small>
+                          </div>
+                          <AppIcon name="arrow" />
+                        </Link>
+                      ))}
+                      {data.openSales.length > 0 && (
+                        <Link href="/reports" className="attention-item">
+                          <span data-level="info">
+                            <AppIcon name="calendar" />
+                          </span>
+                          <div>
+                            <strong>
+                              {data.openSales.length} créance
+                              {data.openSales.length > 1 ? "s" : ""} ouverte
+                              {data.openSales.length > 1 ? "s" : ""}
+                            </strong>
+                            <small>Suivre les paiements clients</small>
+                          </div>
+                          <AppIcon name="arrow" />
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section className="dashboard-section surface-card animate-enter">
+                  <div className="section-title">
+                    <div>
+                      <h2>Vos activités</h2>
+                      <p>Une vue rapide sur les moteurs du foyer.</p>
+                    </div>
+                    <Link className="section-link" href="/activities">
+                      Gérer <AppIcon name="arrow" className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <div className="activity-strip">
+                    {data.activities.map((activity) => (
+                      <article
+                        key={activity.code}
+                        className="activity-mini-card"
+                        data-code={activity.code}
+                      >
+                        <span>
+                          <AppIcon name={activityIcon(activity.code)} />
+                        </span>
+                        <div>
+                          <strong>{activity.name}</strong>
+                          <small data-active={activity.active || undefined}>
+                            {activity.active ? "Active" : "En attente"}
+                          </small>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <section className="dashboard-section surface-card recent-section animate-enter">
+                <div className="section-title">
+                  <div>
+                    <h2>Activité récente</h2>
+                    <p>Les dernières écritures validées.</p>
+                  </div>
+                  <Link className="section-link" href="/operations">
+                    Historique <AppIcon name="arrow" className="h-4 w-4" />
+                  </Link>
+                </div>
+                {data.operations.length === 0 ? (
+                  <div className="empty-state">
+                    <span>
+                      <AppIcon name="operations" />
+                    </span>
+                    <strong>Votre journal est prêt</strong>
+                    <p>La première opération apparaîtra ici instantanément.</p>
+                    <Link className="premium-button" href="/operations">
+                      Ajouter une opération
+                    </Link>
+                  </div>
+                ) : (
+                  <ul className="recent-list">
+                    {data.operations.map((operation) => (
+                      <li key={operation.number}>
+                        <span className="recent-icon">
+                          <AppIcon name={operationIcon(operation.type)} />
+                        </span>
+                        <div>
+                          <strong>
+                            {operationLabels[operation.type] ?? operation.type}
+                          </strong>
+                          <small>
+                            {operation.number} · {operation.type}
+                          </small>
+                        </div>
+                        <span
+                          className="recent-status"
+                          data-status={operation.status}
+                        >
+                          {operation.status === "posted"
+                            ? "Validée"
+                            : operation.status}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </section>
+          </>
+        )}
+      </div>
+      <AppNavigation />
     </main>
   );
 }
