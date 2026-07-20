@@ -29,6 +29,7 @@ const baseOperationSchema = z.object({
     "cash_sale",
     "credit_sale",
     "payment",
+    "opening_stock",
     "stock_purchase",
     "operating_expense",
     "family_expense",
@@ -72,7 +73,7 @@ const operationSchema = baseOperationSchema.superRefine((value, context) => {
       context.addIssue({ code: "custom", path: [field], message });
   };
   if (
-    ["cash_sale", "credit_sale", "stock_purchase"].includes(
+    ["cash_sale", "credit_sale", "opening_stock", "stock_purchase"].includes(
       value.operation_type,
     )
   ) {
@@ -134,46 +135,79 @@ export async function createQuickOperation(formData: FormData) {
     .maybeSingle();
   if (!member?.household_id) redirect("/onboarding");
 
-  const { error } = await supabase.rpc("record_financial_operation", {
-    p_household_id: member.household_id,
-    p_operation_type: parsed.data.operation_type,
-    p_amount_source: parsed.data.amount,
-    p_currency: parsed.data.currency,
-    p_exchange_rate: parsed.data.exchange_rate,
-    p_description: parsed.data.description,
-    p_activity_code: parsed.data.activity_code || null,
-    p_idempotency_key: parsed.data.idempotency_key,
-    p_payload: {
-      operation_date: parsed.data.operation_date || undefined,
-      product_id: parsed.data.product_id || undefined,
-      quantity: parsed.data.quantity || undefined,
-      contact_id: parsed.data.contact_id || undefined,
-      supplier_id: parsed.data.supplier_id || undefined,
-      sale_id: parsed.data.sale_id || undefined,
-      due_date: parsed.data.due_date || undefined,
-      source_cash_account_id: parsed.data.source_cash_account_id || undefined,
-      destination_cash_account_id:
-        parsed.data.destination_cash_account_id || undefined,
-      destination_amount_source: parsed.data.destination_amount || undefined,
-      destination_currency: parsed.data.destination_currency || undefined,
-      destination_exchange_rate:
-        parsed.data.destination_exchange_rate || undefined,
-      category_id: parsed.data.category_id || undefined,
-      savings_goal_id: parsed.data.savings_goal_id || undefined,
-      fees_source: parsed.data.fees_source || undefined,
-    },
-  });
+  const result =
+    parsed.data.operation_type === "opening_stock"
+      ? await supabase.rpc("record_opening_stock", {
+          p_household_id: member.household_id,
+          p_product_id: parsed.data.product_id,
+          p_quantity: parsed.data.quantity,
+          p_total_value_source: parsed.data.amount,
+          p_currency: parsed.data.currency,
+          p_exchange_rate: parsed.data.exchange_rate,
+          p_operation_date: parsed.data.operation_date || null,
+          p_description: parsed.data.description,
+          p_idempotency_key: parsed.data.idempotency_key,
+        })
+      : await supabase.rpc("record_financial_operation", {
+          p_household_id: member.household_id,
+          p_operation_type: parsed.data.operation_type,
+          p_amount_source: parsed.data.amount,
+          p_currency: parsed.data.currency,
+          p_exchange_rate: parsed.data.exchange_rate,
+          p_description: parsed.data.description,
+          p_activity_code: parsed.data.activity_code || null,
+          p_idempotency_key: parsed.data.idempotency_key,
+          p_payload: {
+            operation_date: parsed.data.operation_date || undefined,
+            product_id: parsed.data.product_id || undefined,
+            quantity: parsed.data.quantity || undefined,
+            contact_id: parsed.data.contact_id || undefined,
+            supplier_id: parsed.data.supplier_id || undefined,
+            sale_id: parsed.data.sale_id || undefined,
+            due_date: parsed.data.due_date || undefined,
+            source_cash_account_id:
+              parsed.data.source_cash_account_id || undefined,
+            destination_cash_account_id:
+              parsed.data.destination_cash_account_id || undefined,
+            destination_amount_source:
+              parsed.data.destination_amount || undefined,
+            destination_currency: parsed.data.destination_currency || undefined,
+            destination_exchange_rate:
+              parsed.data.destination_exchange_rate || undefined,
+            category_id: parsed.data.category_id || undefined,
+            savings_goal_id: parsed.data.savings_goal_id || undefined,
+            fees_source: parsed.data.fees_source || undefined,
+          },
+        });
+  const { error } = result;
   if (error) {
-    const knownError = [
-      "not allowed",
-      "insufficient stock",
-      "payment exceeds sale balance",
-      "idempotency key conflict for household",
-    ].find((message) => error.message.includes(message));
-    const code = knownError?.replaceAll(" ", "_") ?? "operation_failed";
+    const knownErrors: Array<[string, string]> = [
+      ["not allowed", "not_allowed"],
+      ["insufficient stock", "insufficient_stock"],
+      ["payment exceeds sale balance", "payment_exceeds_sale_balance"],
+      [
+        "idempotency key conflict for household",
+        "idempotency_key_conflict_for_household",
+      ],
+      [
+        "opening stock requires an active physical product",
+        "invalid_opening_product",
+      ],
+      [
+        "opening stock quantity, value and exchange rate must be positive",
+        "invalid_opening_stock",
+      ],
+    ];
+    const code =
+      knownErrors.find(([message]) => error.message.includes(message))?.[1] ??
+      "operation_failed";
     redirect(`/operations?error=${code}`);
   }
   revalidatePath("/");
   revalidatePath("/operations");
-  redirect("/operations?success=1");
+  redirect(
+    parsed.data.operation_type === "opening_stock"
+      ? "/operations?success=opening_stock"
+      : "/operations?success=1",
+  );
 }
