@@ -161,10 +161,13 @@ export default async function Page({
               <strong>{formatMoney(data.kpis.cash)}</strong>
             </div>
           </div>
-          <div className="report-spotlight-visual" aria-hidden="true">
-            {[42, 61, 48, 76, 66, 88, 74, 96].map((height, index) => (
-              <span key={index} style={{ height: `${height}%` }} />
-            ))}
+          <div
+            className="report-spotlight-visual report-spotlight-geometry"
+            aria-hidden="true"
+          >
+            <span className="report-visual-orbit" />
+            <span className="report-visual-axis" />
+            <span className="report-visual-block" />
           </div>
         </section>
 

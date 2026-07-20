@@ -108,6 +108,10 @@ export default async function Home({
       ? params.activity
       : null;
   const data = await getDashboardData({ ...range, activityId });
+  const householdGreeting = (data.householdName ?? "Kayembe").replace(
+    /^famille\s+/i,
+    "",
+  );
   const cards: Array<{
     label: string;
     value: string;
@@ -234,7 +238,7 @@ export default async function Home({
               <BrandMark className="h-10 w-10" />
               <span>
                 <strong>{APP_BRAND.wordmark}</strong>
-                <small>Family finance</small>
+                <small>Finance familiale</small>
               </span>
             </div>
             <div className="editorial-masthead-center" aria-hidden="true">
@@ -262,15 +266,16 @@ export default async function Home({
           <div className="editorial-hero-layout">
             <div className="editorial-hero-copy">
               <p className="editorial-kicker">
-                <i aria-hidden="true" /> 01 — Tableau de bord familial
+                <i aria-hidden="true" /> 01 — Bonjour, famille{" "}
+                {householdGreeting}
               </p>
               <h1>
-                Votre argent,
-                <em> mis en perspective.</em>
+                Votre foyer,
+                <em> en mouvement.</em>
               </h1>
               <p className="editorial-hero-description">
-                Une lecture calme et précise de ce que votre famille possède,
-                construit et prépare pour demain.
+                Une vision vivante et précise de ce que votre famille gagne,
+                protège et prépare pour demain.
               </p>
               <div className="editorial-hero-actions">
                 <Link
@@ -318,7 +323,7 @@ export default async function Home({
                 </div>
               </div>
               <span className="editorial-art-signature" aria-hidden="true">
-                Vision financière · Kinshasa
+                Famille Kayembe · Kinshasa
               </span>
             </div>
           </div>
