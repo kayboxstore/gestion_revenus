@@ -200,10 +200,12 @@ a:active {
   bottom: calc(5.6rem + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-content: center;
+  width: 3.45rem;
+  height: 3.45rem;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 999px;
-  padding: 0.8rem 1.05rem;
+  padding: 0;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
   box-shadow: var(--shadow-float);
@@ -212,9 +214,26 @@ a:active {
   text-decoration: none;
 }
 
+.app-floating-action > span {
+  display: none;
+}
+
 .app-floating-action:hover {
   box-shadow: 0 22px 50px rgba(37, 99, 235, 0.42);
   transform: translateY(-2px);
+}
+
+@media (min-width: 640px) {
+  .app-floating-action {
+    gap: 0.55rem;
+    width: auto;
+    height: auto;
+    padding: 0.8rem 1.05rem;
+  }
+
+  .app-floating-action > span {
+    display: inline;
+  }
 }
 
 .page-heading {

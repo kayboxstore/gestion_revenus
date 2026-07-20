@@ -3,6 +3,7 @@ import { AppNavigation } from "@/components/app-navigation";
 import { PageHeading } from "@/components/page-heading";
 import { getDashboardData, type ReportRow } from "@/lib/dashboard/queries";
 import { decimal, formatMoney } from "@/lib/finance/money";
+import { translateStatus } from "@/lib/i18n/status";
 
 function ReportSection({
   title,
@@ -49,7 +50,7 @@ function ReportSection({
                 <div className="report-bar" aria-hidden="true">
                   <span style={{ width: percentage }} />
                 </div>
-                {row.detail && <p>{row.detail}</p>}
+                {row.detail && <p>{translateStatus(row.detail)}</p>}
               </li>
             );
           })}

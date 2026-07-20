@@ -4,6 +4,7 @@ import { AppIcon, BrandMark, type AppIconName } from "@/components/app-icon";
 import { AppNavigation } from "@/components/app-navigation";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { formatMoney } from "@/lib/finance/money";
+import { translateStatus } from "@/lib/i18n/status";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const uuidPattern =
@@ -533,17 +534,13 @@ export default async function Home({
                           <strong>
                             {operationLabels[operation.type] ?? operation.type}
                           </strong>
-                          <small>
-                            {operation.number} · {operation.type}
-                          </small>
+                          <small>{operation.number}</small>
                         </div>
                         <span
                           className="recent-status"
                           data-status={operation.status}
                         >
-                          {operation.status === "posted"
-                            ? "Validée"
-                            : operation.status}
+                          {translateStatus(operation.status)}
                         </span>
                       </li>
                     ))}

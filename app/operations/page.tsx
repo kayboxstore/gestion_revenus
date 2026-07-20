@@ -4,6 +4,7 @@ import { AppIcon } from "@/components/app-icon";
 import { AppNavigation } from "@/components/app-navigation";
 import { PageHeading } from "@/components/page-heading";
 import { getDashboardData } from "@/lib/dashboard/queries";
+import { translateStatus } from "@/lib/i18n/status";
 import { QuickOperationForm } from "./quick-operation-form";
 
 const errorMessages: Record<string, string> = {
@@ -179,15 +180,9 @@ export default async function Page({
                               {operationLabels[operation.type] ??
                                 operation.type}
                             </strong>
-                            <small>
-                              {operation.number} · {operation.type}
-                            </small>
+                            <small>{operation.number}</small>
                           </div>
-                          <span>
-                            {operation.status === "posted"
-                              ? "Validée"
-                              : operation.status}
-                          </span>
+                          <span>{translateStatus(operation.status)}</span>
                         </div>
                         <p>
                           {operation.line_count} lignes comptables équilibrées
