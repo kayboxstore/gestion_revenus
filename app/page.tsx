@@ -157,6 +157,10 @@ export default async function Home({
     (product) =>
       product.type === "physical" && isZeroQuantity(product.stock_quantity),
   );
+  const activityMarginByLabel = new Map(
+    data.reports.activityMargins.map((row) => [row.label, row.amount]),
+  );
+  const alertCount = outOfStockProducts.length + data.openSales.length;
   const quickActions: Array<{
     label: string;
     detail: string;
@@ -214,17 +218,32 @@ export default async function Home({
     return `/?${query.toString()}`;
   }
 
+  const primaryAction = !data.authenticated
+    ? { href: "/login?mode=signup", label: "Créer mon espace" }
+    : !data.householdName
+      ? { href: "/onboarding", label: "Créer le foyer" }
+      : { href: "/operations", label: "Nouvelle opération" };
+
   return (
     <main className="app-page dashboard-page">
       <div className="app-page-inner">
-        <section className="dashboard-hero animate-enter">
-          <div className="dashboard-hero-top">
-            <div className="dashboard-brand">
-              <BrandMark className="h-11 w-11" />
-              <div>
-                <p>KayBox Family</p>
-                <strong>{data.householdName ?? "Gestion des revenus"}</strong>
-              </div>
+        <section className="dashboard-hero dashboard-editorial-hero animate-enter">
+          <header className="editorial-masthead">
+            <div className="editorial-wordmark">
+              <BrandMark className="h-10 w-10" />
+              <span>
+                <strong>KAYBOX</strong>
+                <small>Family finance</small>
+              </span>
+            </div>
+            <div className="editorial-masthead-center" aria-hidden="true">
+              <span>Vision</span>
+              <span>Activités</span>
+              <span>Patrimoine</span>
+            </div>
+            <div className="editorial-session">
+              <span>{data.householdName ?? "Espace familial"}</span>
+              <i aria-hidden="true" />
             </div>
             {data.authenticated ? (
               <form action={signOut}>
@@ -237,33 +256,71 @@ export default async function Home({
                 Connexion
               </Link>
             )}
-          </div>
+          </header>
 
-          <div className="dashboard-balance">
-            <p>Trésorerie disponible</p>
-            <h1>{formatMoney(data.kpis.cash)}</h1>
-            <span>
-              <AppIcon name="shield" className="h-4 w-4" />
-              Calculée depuis les écritures validées
-            </span>
-          </div>
+          <div className="editorial-hero-layout">
+            <div className="editorial-hero-copy">
+              <p className="editorial-kicker">
+                <i aria-hidden="true" /> 01 — Tableau de bord familial
+              </p>
+              <h1>
+                Votre argent,
+                <em> mis en perspective.</em>
+              </h1>
+              <p className="editorial-hero-description">
+                Une lecture calme et précise de ce que votre famille possède,
+                construit et prépare pour demain.
+              </p>
+              <div className="editorial-hero-actions">
+                <Link
+                  className="editorial-primary-action"
+                  href={primaryAction.href}
+                >
+                  {primaryAction.label}
+                  <AppIcon name="arrow" />
+                </Link>
+                <Link className="editorial-text-action" href="/reports">
+                  Explorer les rapports <AppIcon name="arrow" />
+                </Link>
+              </div>
+            </div>
 
-          <div className="dashboard-hero-footer">
-            <div>
-              <small>Résultat net</small>
-              <strong>{formatMoney(data.kpis.net_profit)}</strong>
-            </div>
-            <div>
-              <small>Activités actives</small>
-              <strong>{activeActivities.length}</strong>
-            </div>
-            <div>
-              <small>Créances ouvertes</small>
-              <strong>{data.openSales.length}</strong>
+            <div className="editorial-finance-art">
+              <div className="editorial-art-geometry" aria-hidden="true">
+                <span className="editorial-shape editorial-shape-arch" />
+                <span className="editorial-shape editorial-shape-orb" />
+                <span className="editorial-shape editorial-shape-column" />
+                <span className="editorial-shape editorial-shape-base" />
+                <span className="editorial-shape editorial-shape-line" />
+              </div>
+              <div className="editorial-art-balance">
+                <small>Trésorerie disponible</small>
+                <strong className="tabular">
+                  {formatMoney(data.kpis.cash)}
+                </strong>
+                <span>
+                  <i aria-hidden="true" /> Écritures validées uniquement
+                </span>
+              </div>
+              <div className="editorial-art-ledger">
+                <div>
+                  <small>Résultat net</small>
+                  <strong>{formatMoney(data.kpis.net_profit)}</strong>
+                </div>
+                <div>
+                  <small>Activités</small>
+                  <strong>{activeActivities.length}</strong>
+                </div>
+                <div>
+                  <small>Créances</small>
+                  <strong>{data.openSales.length}</strong>
+                </div>
+              </div>
+              <span className="editorial-art-signature" aria-hidden="true">
+                Vision financière · Kinshasa
+              </span>
             </div>
           </div>
-          <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
-          <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
         </section>
 
         {!data.configured && (
@@ -355,29 +412,44 @@ export default async function Home({
               </details>
             </section>
 
-            <section
-              className="kpi-grid animate-enter"
-              aria-label="Indicateurs financiers"
-            >
-              {cards.map((card) => (
-                <article
-                  key={card.label}
-                  className="kpi-card"
-                  data-tone={card.tone}
-                >
-                  <span className="kpi-icon">
-                    <AppIcon name={card.icon} />
-                  </span>
-                  <p>{card.label}</p>
-                  <strong className="tabular">{formatMoney(card.value)}</strong>
-                  <small>{card.detail}</small>
-                </article>
-              ))}
+            <section className="editorial-overview animate-enter">
+              <header className="editorial-section-heading">
+                <div>
+                  <span>02 — Synthèse</span>
+                  <h2>Le portrait financier du foyer</h2>
+                </div>
+                <p>
+                  Cinq repères essentiels, calculés sans confondre revenu,
+                  trésorerie et épargne.
+                </p>
+              </header>
+              <div className="kpi-grid" aria-label="Indicateurs financiers">
+                {cards.map((card, index) => (
+                  <article
+                    key={card.label}
+                    className="kpi-card"
+                    data-tone={card.tone}
+                  >
+                    <span className="kpi-card-index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="kpi-icon">
+                      <AppIcon name={card.icon} />
+                    </span>
+                    <p>{card.label}</p>
+                    <strong className="tabular">
+                      {formatMoney(card.value)}
+                    </strong>
+                    <small>{card.detail}</small>
+                  </article>
+                ))}
+              </div>
             </section>
 
-            <section className="dashboard-section surface-card animate-enter">
-              <div className="section-title">
+            <section className="dashboard-section surface-card editorial-action-section animate-enter">
+              <div className="section-title editorial-section-title">
                 <div>
+                  <span className="editorial-panel-index">03 — Actions</span>
                   <h2>Ajouter en un geste</h2>
                   <p>
                     Choisissez l’intention, l’application adapte le formulaire.
@@ -407,17 +479,45 @@ export default async function Home({
               </div>
             </section>
 
+            <section className="editorial-briefing animate-enter">
+              <div>
+                <span>Brief financier</span>
+                <strong>
+                  {alertCount === 0
+                    ? "Votre foyer avance sans alerte critique."
+                    : alertCount +
+                      " point" +
+                      (alertCount > 1 ? "s" : "") +
+                      " demande" +
+                      (alertCount > 1 ? "nt" : "") +
+                      " votre attention."}
+                </strong>
+              </div>
+              <p>
+                {activeActivities.length} activité
+                {activeActivities.length > 1 ? "s" : ""} active
+                {activeActivities.length > 1 ? "s" : ""} ·{" "}
+                {data.openSales.length} créance
+                {data.openSales.length > 1 ? "s" : ""} ouverte
+                {data.openSales.length > 1 ? "s" : ""}
+              </p>
+              <Link href="/reports">
+                Lire le détail <AppIcon name="arrow" />
+              </Link>
+            </section>
+
             <section className="dashboard-content-grid">
               <div className="space-y-4">
-                <section className="dashboard-section surface-card animate-enter">
-                  <div className="section-title">
+                <section className="dashboard-section surface-card editorial-dashboard-panel animate-enter">
+                  <div className="section-title editorial-section-title">
                     <div>
+                      <span className="editorial-panel-index">
+                        04 — Vigilance
+                      </span>
                       <h2>À surveiller</h2>
                       <p>Les éléments qui méritent votre attention.</p>
                     </div>
-                    <span className="attention-count">
-                      {outOfStockProducts.length + data.openSales.length}
-                    </span>
+                    <span className="attention-count">{alertCount}</span>
                   </div>
                   {outOfStockProducts.length === 0 &&
                   data.openSales.length === 0 ? (
@@ -470,11 +570,14 @@ export default async function Home({
                   )}
                 </section>
 
-                <section className="dashboard-section surface-card animate-enter">
-                  <div className="section-title">
+                <section className="dashboard-section surface-card editorial-dashboard-panel animate-enter">
+                  <div className="section-title editorial-section-title">
                     <div>
+                      <span className="editorial-panel-index">
+                        05 — Activités
+                      </span>
                       <h2>Vos activités</h2>
-                      <p>Une vue rapide sur les moteurs du foyer.</p>
+                      <p>Le statut et le résultat de chaque moteur du foyer.</p>
                     </div>
                     <Link className="section-link" href="/activities">
                       Gérer <AppIcon name="arrow" className="h-4 w-4" />
@@ -496,15 +599,24 @@ export default async function Home({
                             {activity.active ? "Active" : "En attente"}
                           </small>
                         </div>
+                        <div className="activity-mini-result">
+                          <span>Résultat</span>
+                          <strong className="tabular">
+                            {formatMoney(
+                              activityMarginByLabel.get(activity.name) ?? "0",
+                            )}
+                          </strong>
+                        </div>
                       </article>
                     ))}
                   </div>
                 </section>
               </div>
 
-              <section className="dashboard-section surface-card recent-section animate-enter">
-                <div className="section-title">
+              <section className="dashboard-section surface-card recent-section editorial-dashboard-panel animate-enter">
+                <div className="section-title editorial-section-title">
                   <div>
+                    <span className="editorial-panel-index">06 — Journal</span>
                     <h2>Activité récente</h2>
                     <p>Les dernières écritures validées.</p>
                   </div>

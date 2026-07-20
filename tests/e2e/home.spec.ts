@@ -107,9 +107,8 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
 
   await page.getByRole("link", { name: "Accueil" }).click();
   const savingsCard = page
-    .getByText("Épargne")
-    .first()
-    .locator("..")
+    .locator(".kpi-card")
+    .filter({ has: page.getByText("Épargne", { exact: true }) })
     .locator("strong");
   await expect(savingsCard).toContainText("5");
 
