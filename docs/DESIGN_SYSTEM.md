@@ -55,6 +55,9 @@ ou au retour immédiat d’une interaction. Elles sont supprimées avec
 
 ## Photographie
 
-La page de connexion accueillera le portrait fourni par la famille, sans
-recadrage agressif ni filtre qui altère les visages. Une alternative textuelle
-décrira simplement le couple, sans exposer d’information personnelle inutile.
+La page de connexion affiche le portrait fourni par la famille dans un héros
+responsive : bandeau éditorial sur mobile et composition pleine hauteur sur
+bureau. Le cadrage préserve les deux visages, aucun filtre ne les altère et un
+voile olive sert uniquement à maintenir la lisibilité des textes. Une
+alternative textuelle décrit simplement le couple, sans exposer d’information
+personnelle inutile.
