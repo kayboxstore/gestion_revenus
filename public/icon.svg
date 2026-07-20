@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gestion des revenus">
   <defs>
     <linearGradient id="bg" x1="70" y1="40" x2="440" y2="480" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0B1F38"/>
-      <stop offset="1" stop-color="#1555A1"/>
+      <stop stop-color="#11190D"/>
+      <stop offset="1" stop-color="#314620"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <path d="M112 344V216c0-31 25-56 56-56h176c31 0 56 25 56 56v128c0 31-25 56-56 56H168c-31 0-56-25-56-56Z" fill="#fff"/>
-  <path d="M144 200v-24c0-35 29-64 64-64h152v48H208c-9 0-16 7-16 16v24h-48Z" fill="#3b82f6"/>
-  <rect x="304" y="248" width="112" height="72" rx="28" fill="#2563eb"/>
-  <circle cx="344" cy="284" r="12" fill="#fff"/>
+  <path d="M112 344V216c0-31 25-56 56-56h176c31 0 56 25 56 56v128c0 31-25 56-56 56H168c-31 0-56-25-56-56Z" fill="#F2F7EA"/>
+  <path d="M144 200v-24c0-35 29-64 64-64h152v48H208c-9 0-16 7-16 16v24h-48Z" fill="#C7F36B"/>
+  <rect x="304" y="248" width="112" height="72" rx="28" fill="#A8D94F"/>
+  <circle cx="344" cy="284" r="12" fill="#11190D"/>
 </svg>
