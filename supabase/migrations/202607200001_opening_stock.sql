@@ -173,6 +173,45 @@ begin
 end
 $$;
 
+-- Cash is not the same as total assets: inventory and receivables must never
+-- appear in the treasury KPI. Only journal lines tied to a user cash account
+-- contribute to this figure.
+create or replace function get_dashboard_kpis(
+  p_household_id uuid,
+  p_from date default null,
+  p_to date default null,
+  p_activity_id uuid default null
+) returns table(
+  revenue numeric,
+  gross_profit numeric,
+  net_profit numeric,
+  family_expenses numeric,
+  savings numeric,
+  cash numeric
+)
+language sql
+stable
+security definer
+set search_path=public
+as $$
+  select
+    coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type='income' then l.credit_base-l.debit_base when a.account_type='cogs' then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type in ('income','cogs','operating_expense') then l.credit_base-l.debit_base else 0 end),0),
+    coalesce(sum(case when a.account_type='family_expense' then l.debit_base-l.credit_base else 0 end),0),
+    coalesce(sum(case when a.code='savings' then l.debit_base-l.credit_base else 0 end),0),
+    coalesce(sum(case when l.cash_account_id is not null then l.debit_base-l.credit_base else 0 end),0)
+  from journal_lines l
+  join journal_entries e on e.id=l.journal_entry_id
+  join ledger_accounts a on a.id=l.ledger_account_id
+  where l.household_id=p_household_id
+    and is_household_member(p_household_id)
+    and e.status in ('posted','reversed')
+    and (p_from is null or e.entry_date>=p_from)
+    and (p_to is null or e.entry_date<=p_to)
+    and (p_activity_id is null or e.activity_id=p_activity_id);
+$$;
+
 -- Stock movements are append-only projections. Managers must use controlled
 -- financial RPCs just like operators; direct table writes are never required.
 drop policy if exists stock_movements_manager_direct_write on stock_movements;
@@ -258,3 +297,5 @@ grant execute on function record_opening_stock(
 ) to authenticated;
 revoke all on function get_inventory_snapshot(uuid) from public;
 grant execute on function get_inventory_snapshot(uuid) to authenticated;
+revoke all on function get_dashboard_kpis(uuid,date,date,uuid) from public;
+grant execute on function get_dashboard_kpis(uuid,date,date,uuid) to authenticated;
