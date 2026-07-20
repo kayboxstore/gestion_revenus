@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr-CD">
+    <html lang="fr-CD" data-scroll-behavior="smooth">
       <body>
         {children}
         <PwaRegister />
