@@ -153,7 +153,7 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   ).toBeVisible();
   const stockCard = page.locator("section.stock-card");
   const miniUpsStock = stockCard.locator("li").filter({ hasText: "Mini UPS" });
-  await expect(miniUpsStock.locator("strong")).toContainText("2");
+  await expect(miniUpsStock.locator("strong").last()).toContainText("2");
 
   await page.locator('select[name="operation_type"]').selectOption("cash_sale");
   await page.locator('select[name="activity_code"]').selectOption("MINI_UPS");
@@ -174,7 +174,11 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await page.getByRole("button", { name: "Valider l’opération" }).click();
   await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
   await expect(
-    stockCard.locator("li").filter({ hasText: "Mini UPS" }).locator("strong"),
+    stockCard
+      .locator("li")
+      .filter({ hasText: "Mini UPS" })
+      .locator("strong")
+      .last(),
   ).toContainText("1");
   await page.screenshot({
     path: "test-results/screens/operations-mobile.png",
@@ -224,12 +228,12 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   const creditSaleEntry = page
     .locator("li")
     .filter({ hasText: "credit_sale" })
-    .filter({ hasText: "posted" })
+    .filter({ hasText: "Validée" })
     .filter({ hasText: /CRE-/ })
     .first();
   await expect(creditSaleEntry).toContainText(/CRE-[^\s·]+/);
   await expect(creditSaleEntry).toContainText("credit_sale");
-  await expect(creditSaleEntry).toContainText("posted");
+  await expect(creditSaleEntry).toContainText("Validée");
 
   await page.getByRole("link", { name: "Accueil" }).click();
   await page.getByRole("link", { name: "Rapports" }).click();
