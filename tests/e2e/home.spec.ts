@@ -64,7 +64,9 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     .locator("..")
     .locator("strong");
   await expect(revenueCard).toContainText("12");
-  await expect(page.getByText("cash_sale", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("Vente encaissée", { exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: "test-results/screens/dashboard-mobile.png",
     fullPage: true,
@@ -227,12 +229,12 @@ test("administre les rôles et exporte les rapports authentifiés", async ({
   await expect(page.getByText("Opération validée et persistée.")).toBeVisible();
   const creditSaleEntry = page
     .locator("li")
-    .filter({ hasText: "credit_sale" })
+    .filter({ hasText: "Vente à crédit" })
     .filter({ hasText: "Validée" })
     .filter({ hasText: /CRE-/ })
     .first();
   await expect(creditSaleEntry).toContainText(/CRE-[^\s·]+/);
-  await expect(creditSaleEntry).toContainText("credit_sale");
+  await expect(creditSaleEntry).toContainText("Vente à crédit");
   await expect(creditSaleEntry).toContainText("Validée");
 
   await page.getByRole("link", { name: "Accueil" }).click();
