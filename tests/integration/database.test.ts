@@ -467,6 +467,32 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
     });
   });
 
+  it("reports only active physical inventory with quantity and value", async () => {
+    await asUser(ownerId, async (client) => {
+      const report = await client.query<{
+        label: string;
+        amount: string;
+        detail: string;
+      }>(
+        "select label,amount::text,detail from get_stock_report($1) order by label",
+        [refs.householdId],
+      );
+
+      expect(report.rows.map((row) => row.label)).toEqual([
+        "Android TV Box",
+        "Mini UPS",
+      ]);
+      expect(report.rows).not.toContainEqual(
+        expect.objectContaining({ label: "Offre IPTV standard" }),
+      );
+      expect(report.rows[0]).toEqual({
+        label: "Android TV Box",
+        amount: "106.6666",
+        detail: "4 unité(s) en stock",
+      });
+    });
+  });
+
   it("rejects changed payloads on an idempotency retry", async () => {
     await asUser(ownerId, async (client) => {
       const key = randomUUID();
