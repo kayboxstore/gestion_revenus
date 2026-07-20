@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { AppIcon, BrandMark, type AppIconName } from "@/components/app-icon";
 import { AppNavigation } from "@/components/app-navigation";
+import { APP_BRAND } from "@/lib/brand";
 import { getDashboardData } from "@/lib/dashboard/queries";
 import { formatMoney } from "@/lib/finance/money";
 import { translateStatus } from "@/lib/i18n/status";
@@ -232,7 +233,7 @@ export default async function Home({
             <div className="editorial-wordmark">
               <BrandMark className="h-10 w-10" />
               <span>
-                <strong>KAYBOX</strong>
+                <strong>{APP_BRAND.wordmark}</strong>
                 <small>Family finance</small>
               </span>
             </div>

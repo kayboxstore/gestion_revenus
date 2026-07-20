@@ -1,5 +1,6 @@
 import { updatePassword } from "@/app/actions/auth";
 import { AppIcon, BrandMark } from "@/components/app-icon";
+import { APP_BRAND } from "@/lib/brand";
 
 export default async function UpdatePasswordPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function UpdatePasswordPage({
       <section className="auth-form-card password-card">
         <div className="auth-mobile-brand password-brand">
           <BrandMark className="h-11 w-11" />
-          <strong>KayBox Family</strong>
+          <strong>{APP_BRAND.name}</strong>
         </div>
         <p className="auth-eyebrow">Sécurité du compte</p>
         <h1>Nouveau mot de passe</h1>

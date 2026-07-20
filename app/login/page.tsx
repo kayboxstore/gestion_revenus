@@ -1,5 +1,6 @@
 import { requestPasswordReset, signIn, signUp } from "@/app/actions/auth";
 import { AppIcon, BrandMark } from "@/components/app-icon";
+import { APP_BRAND } from "@/lib/brand";
 
 const messages: Record<string, string> = {
   invalid_credentials: "Email ou mot de passe incorrect.",
@@ -55,8 +56,8 @@ export default async function LoginPage({
         <div className="auth-brand">
           <BrandMark className="h-12 w-12" />
           <div>
-            <strong>KayBox Family</strong>
-            <small>Finance familiale</small>
+            <strong>{APP_BRAND.name}</strong>
+            <small>{APP_BRAND.descriptor}</small>
           </div>
         </div>
         <div className="auth-showcase-copy">
@@ -106,7 +107,7 @@ export default async function LoginPage({
         <div className="auth-form-card">
           <div className="auth-mobile-brand">
             <BrandMark className="h-10 w-10" />
-            <strong>KayBox Family</strong>
+            <strong>{APP_BRAND.name}</strong>
           </div>
           <p className="auth-eyebrow">Espace sécurisé</p>
           <h1>{title}</h1>

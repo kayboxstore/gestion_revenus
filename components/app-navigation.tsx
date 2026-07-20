@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { APP_BRAND } from "@/lib/brand";
 import { AppIcon, BrandMark, type AppIconName } from "./app-icon";
 
 const items: Array<{ href: string; label: string; icon: AppIconName }> = [
@@ -25,8 +26,8 @@ export function AppNavigation() {
         >
           <BrandMark className="h-11 w-11" />
           <span>
-            <strong>KayBox</strong>
-            <small>Finance familiale</small>
+            <strong>{APP_BRAND.shortName}</strong>
+            <small>{APP_BRAND.descriptor}</small>
           </span>
         </Link>
         <div className="app-navigation-items">

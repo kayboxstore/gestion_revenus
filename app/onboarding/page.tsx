@@ -1,5 +1,6 @@
 import { onboardHousehold } from "@/app/actions/auth";
 import { AppIcon, BrandMark } from "@/components/app-icon";
+import { APP_BRAND } from "@/lib/brand";
 
 export default async function OnboardingPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function OnboardingPage({
       <section className="onboarding-card surface-card">
         <header className="onboarding-header">
           <BrandMark className="h-12 w-12" />
-          <p>Bienvenue dans KayBox Family</p>
+          <p>Bienvenue dans {APP_BRAND.name}</p>
           <h1>Créons votre espace financier</h1>
           <span>Deux informations suffisent pour commencer.</span>
         </header>
