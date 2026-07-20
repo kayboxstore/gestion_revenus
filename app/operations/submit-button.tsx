@@ -8,8 +8,9 @@ export function SubmitButton() {
     <button
       disabled={pending}
       aria-disabled={pending}
-      className="rounded-xl bg-night px-4 py-3 font-semibold text-white disabled:opacity-60"
+      className="premium-button operation-submit w-full disabled:cursor-wait disabled:opacity-60"
     >
+      {pending && <span className="submit-spinner" aria-hidden="true" />}
       {pending ? "Validation en cours…" : "Valider l’opération"}
     </button>
   );

@@ -1,4 +1,5 @@
 import { requestPasswordReset, signIn, signUp } from "@/app/actions/auth";
+import { AppIcon, BrandMark } from "@/components/app-icon";
 
 const messages: Record<string, string> = {
   invalid_credentials: "Email ou mot de passe incorrect.",
@@ -35,68 +36,148 @@ export default async function LoginPage({
       : mode === "reset"
         ? requestPasswordReset
         : signIn;
+  const title =
+    mode === "signup"
+      ? "Créer un compte"
+      : mode === "reset"
+        ? "Mot de passe oublié"
+        : "Connexion";
+  const subtitle =
+    mode === "signup"
+      ? "Créez l’espace financier privé de votre famille."
+      : mode === "reset"
+        ? "Recevez un lien sécurisé pour reprendre la main."
+        : "Retrouvez instantanément la situation de votre foyer.";
 
   return (
-    <main className="mx-auto max-w-md p-5">
-      <h1 className="text-3xl font-bold">
-        {mode === "signup"
-          ? "Créer un compte"
-          : mode === "reset"
-            ? "Mot de passe oublié"
-            : "Connexion"}
-      </h1>
-      {message && (
-        <p
-          className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900"
-          role="status"
-        >
-          {message}
-        </p>
-      )}
-      <form action={action} className="mt-6 space-y-4">
-        <label className="block">
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            className="mt-1 w-full rounded-xl border p-3"
-          />
-        </label>
-        {mode !== "reset" && (
-          <label className="block">
-            Mot de passe
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete={
-                mode === "signup" ? "new-password" : "current-password"
-              }
-              className="mt-1 w-full rounded-xl border p-3"
-            />
-          </label>
-        )}
-        <input type="hidden" name="next" value={params.next ?? "/"} />
-        <button className="rounded-xl bg-night px-4 py-3 font-semibold text-white">
-          {mode === "signup"
-            ? "Créer le compte"
-            : mode === "reset"
-              ? "Envoyer le lien"
-              : "Se connecter"}
-        </button>
-      </form>
-      <nav
-        className="mt-6 flex flex-wrap gap-4 text-sm text-blue-700"
-        aria-label="Options de connexion"
-      >
-        {mode !== "login" && <a href="/login">Se connecter</a>}
-        {mode !== "signup" && <a href="/login?mode=signup">Créer un compte</a>}
-        {mode !== "reset" && (
-          <a href="/login?mode=reset">Mot de passe oublié</a>
-        )}
-      </nav>
+    <main className="auth-page">
+      <section className="auth-showcase">
+        <div className="auth-brand">
+          <BrandMark className="h-12 w-12" />
+          <div>
+            <strong>KayBox Family</strong>
+            <small>Finance familiale</small>
+          </div>
+        </div>
+        <div className="auth-showcase-copy">
+          <span className="auth-kicker">
+            <i /> Simple. Fiable. À vous.
+          </span>
+          <h2>Votre famille mérite une vision claire de son argent.</h2>
+          <p>
+            Revenus, dépenses, stock et épargne réunis dans une expérience
+            pensée pour votre téléphone.
+          </p>
+        </div>
+        <div className="auth-feature-grid">
+          <div>
+            <span>
+              <AppIcon name="trend" />
+            </span>
+            <strong>Résultat réel</strong>
+            <small>Marges et bénéfices exacts</small>
+          </div>
+          <div>
+            <span>
+              <AppIcon name="shield" />
+            </span>
+            <strong>Données privées</strong>
+            <small>Isolation stricte du foyer</small>
+          </div>
+          <div>
+            <span>
+              <AppIcon name="operations" />
+            </span>
+            <strong>Saisie éclair</strong>
+            <small>Chaque action en quelques gestes</small>
+          </div>
+        </div>
+        <div
+          className="auth-decoration auth-decoration-one"
+          aria-hidden="true"
+        />
+        <div
+          className="auth-decoration auth-decoration-two"
+          aria-hidden="true"
+        />
+      </section>
+
+      <section className="auth-form-zone">
+        <div className="auth-form-card">
+          <div className="auth-mobile-brand">
+            <BrandMark className="h-10 w-10" />
+            <strong>KayBox Family</strong>
+          </div>
+          <p className="auth-eyebrow">Espace sécurisé</p>
+          <h1>{title}</h1>
+          <p className="auth-subtitle">{subtitle}</p>
+          {message && (
+            <p
+              className="status-banner status-banner-info auth-message"
+              role="status"
+            >
+              <AppIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" />
+              {message}
+            </p>
+          )}
+          <form action={action} className="auth-form">
+            <label className="field-label">
+              Email
+              <span className="auth-input-wrap">
+                <AppIcon name="user" />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="premium-field"
+                  placeholder="vous@exemple.com"
+                />
+              </span>
+            </label>
+            {mode !== "reset" && (
+              <label className="field-label">
+                Mot de passe
+                <span className="auth-input-wrap">
+                  <AppIcon name="shield" />
+                  <input
+                    name="password"
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete={
+                      mode === "signup" ? "new-password" : "current-password"
+                    }
+                    className="premium-field"
+                    placeholder="8 caractères minimum"
+                  />
+                </span>
+              </label>
+            )}
+            <input type="hidden" name="next" value={params.next ?? "/"} />
+            <button className="premium-button auth-submit">
+              {mode === "signup"
+                ? "Créer le compte"
+                : mode === "reset"
+                  ? "Envoyer le lien"
+                  : "Se connecter"}
+              <AppIcon name="arrow" className="h-4 w-4" />
+            </button>
+          </form>
+          <nav className="auth-links" aria-label="Options de connexion">
+            {mode !== "login" && <a href="/login">Se connecter</a>}
+            {mode !== "signup" && (
+              <a href="/login?mode=signup">Créer un compte</a>
+            )}
+            {mode !== "reset" && (
+              <a href="/login?mode=reset">Mot de passe oublié</a>
+            )}
+          </nav>
+          <p className="auth-trust">
+            <AppIcon name="shield" /> Connexion chiffrée et données isolées par
+            foyer
+          </p>
+        </div>
+      </section>
     </main>
   );
 }
