@@ -264,6 +264,7 @@
 
 .stock-kpi-grid article {
   display: flex;
+  flex-direction: column;
   min-width: 0;
   gap: 0.75rem;
   border: 1px solid rgba(207, 240, 145, 0.13);
@@ -927,6 +928,10 @@
 }
 
 @media (min-width: 480px) {
+  .stock-kpi-grid article {
+    flex-direction: row;
+  }
+
   .stock-kpi-grid p {
     display: block;
   }
