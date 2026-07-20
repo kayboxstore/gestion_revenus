@@ -126,11 +126,10 @@ export async function getStockWorkspaceData(): Promise<StockWorkspaceData> {
     supabase
       .from("stock_movements")
       .select(
-        "id,product_id,type,quantity,unit_cost_base,reference_type,movement_date",
+        "id,product_id,type,quantity,unit_cost_base,reference_type,movement_date,created_at",
       )
       .eq("household_id", householdId)
-      .order("movement_date", { ascending: false })
-      .order("id", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(30),
     supabase
       .from("inventory_counts")

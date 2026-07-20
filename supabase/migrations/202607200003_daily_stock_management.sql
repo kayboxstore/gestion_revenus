@@ -8,9 +8,15 @@ alter table inventory_counts
 alter table inventory_counts
   add column if not exists submitted_payload jsonb not null default '{}'::jsonb;
 
+alter table stock_movements
+  add column if not exists created_at timestamptz not null default now();
+
 create unique index if not exists inventory_counts_household_id_idempotency_key_unique
   on inventory_counts(household_id,idempotency_key)
   where idempotency_key is not null;
+
+create index if not exists stock_movements_household_id_created_at_idx
+  on stock_movements(household_id,created_at desc);
 
 do $$
 begin

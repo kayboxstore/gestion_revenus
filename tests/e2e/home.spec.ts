@@ -217,6 +217,9 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
     page.getByRole("heading", { name: "Inventaires physiques" }),
   ).toBeVisible();
   await expect(page.getByText("Écart 0", { exact: false })).toBeVisible();
+  await expect(page.locator(".stock-history-list li").first()).toContainText(
+    "Vente",
+  );
   await page.screenshot({
     path: "test-results/screens/stock-mobile.png",
     fullPage: true,
