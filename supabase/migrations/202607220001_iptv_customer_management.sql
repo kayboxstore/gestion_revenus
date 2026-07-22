@@ -116,7 +116,7 @@ declare
   end_date date;
   customer_name text := nullif(trim(p_customer_name),'');
   customer_phone text := nullif(trim(p_customer_phone),'');
-  customer_identifier text := nullif(trim(p_customer_identifier),'');
+  v_customer_identifier text := nullif(trim(p_customer_identifier),'');
   description text;
   payload jsonb;
 begin
@@ -164,12 +164,12 @@ begin
     for update;
     if not found then raise exception 'IPTV subscription to renew was not found'; end if;
     v_contact_id := previous_rec.contact_id;
-    customer_identifier := previous_rec.customer_identifier;
+    v_customer_identifier := previous_rec.customer_identifier;
     start_date := greatest(p_activation_date,previous_rec.expiration_date+1);
     select c.name,c.phone into customer_name,customer_phone
     from contacts c
     where c.household_id=p_household_id and c.id=v_contact_id;
-  elsif customer_name is null or customer_identifier is null then
+  elsif customer_name is null or v_customer_identifier is null then
     raise exception 'customer name and identifier are required';
   end if;
 
@@ -188,7 +188,7 @@ begin
     'iptv_renewed_from_id',p_renewed_from_id,
     'iptv_customer_name',customer_name,
     'iptv_customer_phone',customer_phone,
-    'iptv_customer_identifier',customer_identifier,
+    'iptv_customer_identifier',v_customer_identifier,
     'iptv_activation_date',start_date,
     'iptv_expiration_date',end_date
   ));
@@ -204,12 +204,12 @@ begin
   if v_subscription_id is not null then return v_subscription_id; end if;
 
   perform pg_advisory_xact_lock(
-    hashtextextended(p_household_id::text||':iptv:'||lower(customer_identifier),0)
+    hashtextextended(p_household_id::text||':iptv:'||lower(v_customer_identifier),0)
   );
   if p_renewed_from_id is null and exists(
     select 1 from iptv_subscriptions s
     where s.household_id=p_household_id
-      and lower(s.customer_identifier)=lower(customer_identifier)
+      and lower(s.customer_identifier)=lower(v_customer_identifier)
       and s.status<>'cancelled'
   ) then
     raise exception 'IPTV customer identifier already exists';
@@ -241,7 +241,7 @@ begin
     household_id,contact_id,plan_id,customer_identifier,activation_date,
     expiration_date,status,sale_id,journal_entry_id,renewed_from_id,created_by
   ) values(
-    p_household_id,v_contact_id,p_plan_id,customer_identifier,start_date,
+    p_household_id,v_contact_id,p_plan_id,v_customer_identifier,start_date,
     end_date,'active',v_sale_id,v_entry_id,p_renewed_from_id,auth.uid()
   ) returning id into v_subscription_id;
 
