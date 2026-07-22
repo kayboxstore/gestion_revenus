@@ -1840,6 +1840,7 @@ summary:focus-visible {
 }
 
 .auth-kicker {
+  display: none;
   border: 1px solid rgba(255, 253, 247, 0.24);
   background: rgba(24, 34, 22, 0.78);
   color: var(--kayembe-paper);
@@ -2012,6 +2013,10 @@ summary:focus-visible {
 }
 
 @media (min-width: 860px) {
+  .auth-kicker {
+    display: inline-flex;
+  }
+
   .auth-showcase {
     min-height: 100vh;
     padding: 2rem;
