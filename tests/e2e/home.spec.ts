@@ -113,11 +113,11 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await expect(
     page.getByRole("heading", { name: "Clients et échéances" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Mensuel", { exact: true }).first(),
-  ).toBeVisible();
   const activationPanel = page.locator("details.iptv-action-panel");
   await activationPanel.locator("summary").click();
+  const planField = activationPanel.getByLabel("Formule");
+  await expect(planField).toBeVisible();
+  await expect(planField).toContainText("Mensuel");
   await activationPanel.getByLabel("Nom du client").fill("Client IPTV E2E");
   await activationPanel.getByLabel("Téléphone").fill("+243810000111");
   await activationPanel.getByLabel("Identifiant IPTV").fill("client-iptv-e2e");
