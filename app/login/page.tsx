@@ -60,6 +60,7 @@ export default async function LoginPage({
             alt="Portrait du couple Kayembe"
             fill
             priority
+            unoptimized
             sizes="(min-width: 860px) 55vw, 100vw"
           />
         </figure>
