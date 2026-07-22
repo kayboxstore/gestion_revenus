@@ -9,32 +9,12 @@ const configured = Boolean(
 test("protects business routes and exposes complete French authentication", async ({
   page,
 }) => {
-  const portraitNetwork = {
-    failures: [] as Array<{ error: string; url: string }>,
-    requests: [] as string[],
-    responses: [] as Array<{ status: number; url: string }>,
-  };
-  page.on("request", (request) => {
-    if (request.url().includes("famille-kayembe")) {
-      portraitNetwork.requests.push(request.url());
-    }
-  });
-  page.on("requestfailed", (request) => {
-    if (request.url().includes("famille-kayembe")) {
-      portraitNetwork.failures.push({
-        error: request.failure()?.errorText ?? "Erreur inconnue",
-        url: request.url(),
-      });
-    }
-  });
-  page.on("response", (response) => {
-    if (response.url().includes("famille-kayembe")) {
-      portraitNetwork.responses.push({
-        status: response.status(),
-        url: response.url(),
-      });
-    }
-  });
+  const portraitResponse = await page.request.get(
+    "/images/famille-kayembe.jpg",
+    { maxRedirects: 0 },
+  );
+  expect(portraitResponse.status()).toBe(200);
+  expect(portraitResponse.headers()["content-type"]).toContain("image/jpeg");
   await page.goto("/operations");
   if (configured) {
     await expect(page).toHaveURL(/\/login\?next=/);
@@ -47,34 +27,13 @@ test("protects business routes and exposes complete French authentication", asyn
   const familyPortrait = page.getByAltText("Portrait du couple Kayembe");
   await expect(familyPortrait).toBeVisible();
   await expect(familyPortrait).toHaveAttribute("src", /famille-kayembe/);
-  await page
-    .waitForFunction(
-      () =>
-        document.querySelector<HTMLImageElement>(
-          'img[alt="Portrait du couple Kayembe"]',
-        )?.naturalWidth,
-      undefined,
-      { timeout: 5_000 },
+  await expect
+    .poll(() =>
+      familyPortrait.evaluate(
+        (image) => (image as HTMLImageElement).naturalWidth,
+      ),
     )
-    .catch(() => undefined);
-  const portraitState = await familyPortrait.evaluate((image) => {
-    const portrait = image as HTMLImageElement;
-    return {
-      complete: portrait.complete,
-      currentSrc: portrait.currentSrc,
-      naturalHeight: portrait.naturalHeight,
-      naturalWidth: portrait.naturalWidth,
-      src: portrait.src,
-    };
-  });
-  await page.screenshot({
-    path: "test-results/screens/login-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    portraitState.naturalWidth,
-    `Portrait non décodé : ${JSON.stringify({ portraitNetwork, portraitState })}`,
-  ).toBeGreaterThan(0);
+    .toBeGreaterThan(0);
   await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(
@@ -83,6 +42,10 @@ test("protects business routes and exposes complete French authentication", asyn
   await expect(
     page.getByRole("link", { name: "Mot de passe oublié" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/screens/login-mobile.png",
+    fullPage: true,
+  });
 });
 
 test("onboards an authenticated owner and persists an IPTV cash sale", async ({
