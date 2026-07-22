@@ -13,7 +13,7 @@ alter table iptv_subscriptions
   add column if not exists journal_entry_id uuid references journal_entries(id),
   add column if not exists renewed_from_id uuid references iptv_subscriptions(id),
   add column if not exists reminder_days integer not null default 7,
-  add column if not exists created_by uuid references profiles(id),
+  add column if not exists created_by uuid references auth.users(id),
   add column if not exists created_at timestamptz not null default now(),
   add constraint iptv_subscriptions_reminder_days_range
     check(reminder_days between 0 and 90),
@@ -341,10 +341,10 @@ begin
         or s.customer_identifier ilike '%'||trim(p_search)||'%'
       )
   ), filtered as (
-    select * from base
+    select b.* from base b
     where p_status='all'
-      or lifecycle_status=p_status
-      or (p_status='attention' and lifecycle_status in ('expiring','expired'))
+      or b.lifecycle_status=p_status
+      or (p_status='attention' and b.lifecycle_status in ('expiring','expired'))
   )
   select f.*,count(*) over() as total_count
   from filtered f
