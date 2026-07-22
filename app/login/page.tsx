@@ -75,7 +75,7 @@ export default async function LoginPage({
           <span className="auth-kicker">
             <i /> Famille Kayembe · Kinshasa
           </span>
-          <h2>Construire ensemble, piloter avec clarté.</h2>
+          <h2>Avancer ensemble, avec clarté.</h2>
           <p>
             Revenus, dépenses, stock et épargne réunis dans une expérience
             pensée pour votre téléphone.

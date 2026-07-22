@@ -122,6 +122,9 @@ export default async function Home({
     /^famille\s+/i,
     "",
   );
+  const welcomeHousehold = /^foyer\b/i.test(householdGreeting)
+    ? householdGreeting
+    : `famille ${householdGreeting}`;
   const todayLabel = kinshasaDateLabel();
   const cards: Array<{
     label: string;
@@ -278,7 +281,7 @@ export default async function Home({
               <p className="editorial-kicker">{todayLabel} · Kinshasa</p>
               <h1>
                 Bienvenue,
-                <em> famille {householdGreeting}.</em>
+                <em> {welcomeHousehold}.</em>
               </h1>
               <p className="editorial-hero-description">
                 Votre trésorerie, vos résultats et les priorités du foyer dans
