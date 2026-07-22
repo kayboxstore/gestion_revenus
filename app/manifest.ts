@@ -6,8 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: APP_BRAND.shortName,
     start_url: "/",
     display: "standalone",
-    background_color: "#f7f3e8",
-    theme_color: "#f7f3e8",
+    background_color: "#f4f1e9",
+    theme_color: "#f4f1e9",
     icons: [
       {
         src: "/icon.svg",
