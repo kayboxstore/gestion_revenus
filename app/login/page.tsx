@@ -1,6 +1,7 @@
 import { requestPasswordReset, signIn, signUp } from "@/app/actions/auth";
 import { AppIcon, BrandMark } from "@/components/app-icon";
 import { APP_BRAND } from "@/lib/brand";
+import Image from "next/image";
 
 const messages: Record<string, string> = {
   invalid_credentials: "Email ou mot de passe incorrect.",
@@ -53,6 +54,16 @@ export default async function LoginPage({
   return (
     <main className="auth-page">
       <section className="auth-showcase">
+        <figure className="auth-family-photo">
+          <Image
+            src="/images/famille-kayembe.jpg"
+            alt="Portrait du couple Kayembe"
+            fill
+            priority
+            unoptimized
+            sizes="(min-width: 860px) 55vw, 100vw"
+          />
+        </figure>
         <div className="auth-brand">
           <BrandMark className="h-12 w-12" />
           <div>
@@ -93,14 +104,6 @@ export default async function LoginPage({
             <small>Chaque action en quelques gestes</small>
           </div>
         </div>
-        <div
-          className="auth-decoration auth-decoration-one"
-          aria-hidden="true"
-        />
-        <div
-          className="auth-decoration auth-decoration-two"
-          aria-hidden="true"
-        />
       </section>
 
       <section className="auth-form-zone">

@@ -9,6 +9,12 @@ const configured = Boolean(
 test("protects business routes and exposes complete French authentication", async ({
   page,
 }) => {
+  const portraitResponse = await page.request.get(
+    "/images/famille-kayembe.jpg",
+    { maxRedirects: 0 },
+  );
+  expect(portraitResponse.status()).toBe(200);
+  expect(portraitResponse.headers()["content-type"]).toContain("image/jpeg");
   await page.goto("/operations");
   if (configured) {
     await expect(page).toHaveURL(/\/login\?next=/);
@@ -18,6 +24,16 @@ test("protects business routes and exposes complete French authentication", asyn
     await expect(page).toHaveURL(/\/login\?next=/);
   }
   await page.goto("/login");
+  const familyPortrait = page.getByAltText("Portrait du couple Kayembe");
+  await expect(familyPortrait).toBeVisible();
+  await expect(familyPortrait).toHaveAttribute("src", /famille-kayembe/);
+  await expect
+    .poll(() =>
+      familyPortrait.evaluate(
+        (image) => (image as HTMLImageElement).naturalWidth,
+      ),
+    )
+    .toBeGreaterThan(0);
   await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(
@@ -26,6 +42,10 @@ test("protects business routes and exposes complete French authentication", asyn
   await expect(
     page.getByRole("link", { name: "Mot de passe oublié" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/screens/login-mobile.png",
+    fullPage: true,
+  });
 });
 
 test("onboards an authenticated owner and persists an IPTV cash sale", async ({

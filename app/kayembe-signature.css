@@ -1779,15 +1779,47 @@ summary:focus-visible {
 }
 
 .auth-showcase {
+  display: flex;
+  min-height: clamp(20rem, 52vh, 25rem);
+  padding: 1rem;
   background:
-    linear-gradient(90deg, rgba(38, 49, 32, 0.035) 1px, transparent 1px),
-    linear-gradient(rgba(38, 49, 32, 0.035) 1px, transparent 1px),
-    var(--kayembe-olive);
-  background-size:
-    44px 44px,
-    44px 44px,
-    auto;
-  color: var(--kayembe-deep);
+    linear-gradient(rgba(31, 42, 28, 0.08), rgba(31, 42, 28, 0.08)),
+    var(--kayembe-deep);
+  color: var(--kayembe-paper);
+}
+
+.auth-family-photo {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.auth-family-photo img {
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+.auth-brand,
+.auth-showcase-copy,
+.auth-feature-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-family-photo::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(20, 29, 18, 0.2) 0%, transparent 38%),
+    linear-gradient(
+      0deg,
+      rgba(20, 29, 18, 0.92) 0%,
+      rgba(20, 29, 18, 0.42) 42%,
+      transparent 72%
+    );
+  content: "";
 }
 
 .auth-brand .brand-mark,
@@ -1799,18 +1831,19 @@ summary:focus-visible {
 }
 
 .auth-brand strong {
-  color: var(--kayembe-deep);
+  color: var(--kayembe-paper);
   letter-spacing: 0.05em;
 }
 
 .auth-brand small {
-  color: #3e4937;
+  color: #e2e5d6;
 }
 
 .auth-kicker {
-  border: 1px solid rgba(38, 49, 32, 0.11);
-  background: rgba(255, 253, 247, 0.54);
-  color: #3e4937;
+  display: none;
+  border: 1px solid rgba(255, 253, 247, 0.24);
+  background: rgba(24, 34, 22, 0.78);
+  color: var(--kayembe-paper);
 }
 
 .auth-kicker i {
@@ -1819,50 +1852,65 @@ summary:focus-visible {
 }
 
 .auth-showcase-copy h2 {
-  color: var(--kayembe-deep);
+  margin-top: 0.8rem;
+  color: var(--kayembe-paper);
   font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 8vw, 2.75rem);
   font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-shadow: 0 2px 18px rgba(16, 23, 14, 0.22);
 }
 
 .auth-showcase-copy p {
-  color: #505b47;
+  display: none;
+  color: #e3e6d8;
+}
+
+.auth-feature-grid {
+  display: none;
 }
 
 .auth-feature-grid > div {
-  border-color: rgba(38, 49, 32, 0.12);
-  background: rgba(255, 253, 247, 0.58);
+  border-color: rgba(255, 253, 247, 0.16);
+  background: rgba(24, 34, 22, 0.82);
 }
 
 .auth-feature-grid span {
-  border: 1px solid rgba(38, 49, 32, 0.1);
-  background: var(--kayembe-paper);
-  color: var(--kayembe-deep);
+  border: 1px solid rgba(255, 253, 247, 0.16);
+  background: rgba(255, 253, 247, 0.1);
+  color: #e4cf8c;
 }
 
 .auth-feature-grid strong {
-  color: var(--kayembe-deep);
+  color: var(--kayembe-paper);
 }
 
 .auth-feature-grid small {
-  color: #626c57;
+  color: #d5dbc8;
 }
 
 .auth-decoration {
-  border-color: rgba(255, 253, 247, 0.55);
-  box-shadow: 0 0 0 3rem rgba(255, 253, 247, 0.09);
+  display: none;
 }
 
 .auth-form-zone {
+  min-height: auto;
+  padding: 0 1rem 1rem;
   background: var(--kayembe-bg);
 }
 
 .auth-form-card {
+  position: relative;
+  z-index: 2;
+  margin: -1.15rem auto 0;
   border-color: rgba(96, 106, 78, 0.17);
   background: var(--kayembe-paper);
   box-shadow: 0 24px 60px rgba(49, 55, 36, 0.1);
 }
 
-.auth-mobile-brand {
+.auth-page .auth-mobile-brand {
+  display: none;
   color: var(--kayembe-deep);
 }
 
@@ -1961,6 +2009,43 @@ summary:focus-visible {
 @media (min-width: 840px) {
   .dashboard-page .kpi-card:first-child {
     background: var(--kayembe-sage);
+  }
+}
+
+@media (min-width: 860px) {
+  .auth-kicker {
+    display: inline-flex;
+  }
+
+  .auth-showcase {
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .auth-family-photo img {
+    object-position: 50% 36%;
+  }
+
+  .auth-showcase-copy h2 {
+    max-width: 38rem;
+    font-size: clamp(2.8rem, 5vw, 4.6rem);
+  }
+
+  .auth-showcase-copy p {
+    display: block;
+  }
+
+  .auth-feature-grid {
+    display: grid;
+  }
+
+  .auth-form-zone {
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .auth-form-card {
+    margin: 0;
   }
 }
 
