@@ -976,6 +976,10 @@ summary:focus-visible {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
+.dashboard-page .activity-strip {
+  grid-template-columns: 1fr;
+}
+
 .activity-mini-result {
   display: flex;
   min-width: 4.8rem;
@@ -1849,6 +1853,10 @@ summary:focus-visible {
   .editorial-action-section,
   .editorial-dashboard-panel {
     padding: 1.2rem;
+  }
+
+  .dashboard-page .activity-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .auth-form-card,
