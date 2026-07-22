@@ -73,9 +73,9 @@ export default async function LoginPage({
         </div>
         <div className="auth-showcase-copy">
           <span className="auth-kicker">
-            <i /> Simple. Fiable. À vous.
+            <i /> Famille Kayembe · Kinshasa
           </span>
-          <h2>Votre famille mérite une vision claire de son argent.</h2>
+          <h2>Construire ensemble, piloter avec clarté.</h2>
           <p>
             Revenus, dépenses, stock et épargne réunis dans une expérience
             pensée pour votre téléphone.
@@ -100,7 +100,7 @@ export default async function LoginPage({
             <span>
               <AppIcon name="operations" />
             </span>
-            <strong>Saisie éclair</strong>
+            <strong>Simple au quotidien</strong>
             <small>Chaque action en quelques gestes</small>
           </div>
         </div>

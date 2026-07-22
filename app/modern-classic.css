@@ -1,36 +1,42 @@
 /*
- * Kayembe Moderne Classique
- * A calm, durable interface for daily financial work: warm paper, muted olive,
- * precise typography, fine borders and restrained depth.
+ * Kayembe Moderne Classique — refined edition
+ * A warm, precise and durable financial workspace with disciplined contrast,
+ * generous rhythm and a restrained family signature.
  */
 
 :root {
   color-scheme: light;
-  background: #f4f1e9;
-  color: #253029;
-  --surface: #fffefa;
-  --surface-soft: #efede5;
-  --ink: #253029;
-  --muted: #697169;
-  --line: #d8d8cf;
-  --night: #203129;
-  --electric: #596b5d;
-  --electric-soft: #e3e8df;
-  --mint: #467057;
-  --amber: #986c2c;
+  background: #f5f2ea;
+  color: #26322c;
+  --surface: #fffdf8;
+  --surface-soft: #eeede6;
+  --ink: #26322c;
+  --muted: #667069;
+  --line: #d9ddd6;
+  --night: #1f352b;
+  --electric: #5d7162;
+  --electric-soft: #e2e9e0;
+  --mint: #426f55;
+  --amber: #936526;
   --danger: #a34e43;
-  --classic-paper: #fffefa;
-  --classic-canvas: #f4f1e9;
-  --classic-soft: #ecebe3;
-  --classic-sage: #dce2d8;
-  --classic-olive: #87927c;
-  --classic-forest: #203129;
-  --classic-gold: #ae8952;
-  --classic-positive: #467057;
-  --classic-warning: #986c2c;
+  --classic-paper: #fffdf8;
+  --classic-canvas: #f5f2ea;
+  --classic-soft: #eeede6;
+  --classic-sage: #dde5d9;
+  --classic-olive: #8c9a82;
+  --classic-forest: #1f352b;
+  --classic-gold: #b2874d;
+  --classic-positive: #426f55;
+  --classic-warning: #936526;
   --classic-danger: #a34e43;
-  --shadow-card: 0 8px 24px rgba(37, 48, 41, 0.055);
-  --shadow-float: 0 14px 32px rgba(32, 49, 41, 0.2);
+  --classic-display:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --classic-sans:
+    Inter, Aptos, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --shadow-card:
+    0 1px 2px rgba(31, 53, 43, 0.035), 0 12px 34px rgba(31, 53, 43, 0.055);
+  --shadow-float: 0 16px 38px rgba(31, 53, 43, 0.22);
 }
 
 html {
@@ -40,6 +46,8 @@ html {
 body {
   background: var(--classic-canvas);
   color: var(--ink);
+  font-family: var(--classic-sans);
+  font-synthesis: none;
 }
 
 body::before {
@@ -68,14 +76,17 @@ summary:focus-visible {
 
 .brand-mark {
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 0.7rem;
+  border-radius: 0.8rem;
   background: var(--classic-forest);
   color: var(--classic-paper);
-  box-shadow: none;
+  box-shadow: 0 8px 20px rgba(31, 53, 43, 0.15);
 }
 
 .app-page {
   background: transparent;
+  padding-right: 0.85rem;
+  padding-bottom: 8.8rem;
+  padding-left: 0.85rem;
 }
 
 .app-page-inner {
@@ -85,10 +96,16 @@ summary:focus-visible {
 /* Navigation */
 
 .app-navigation {
-  border-color: #d4d6ce;
-  background: rgba(255, 254, 250, 0.98);
-  box-shadow: 0 -7px 24px rgba(37, 48, 41, 0.07);
-  backdrop-filter: blur(14px);
+  right: 0.65rem;
+  bottom: max(0.65rem, env(safe-area-inset-bottom));
+  left: 0.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(31, 53, 43, 0.14);
+  border-radius: 1.15rem;
+  padding: 0.38rem;
+  background: rgba(255, 253, 248, 0.97);
+  box-shadow: 0 14px 40px rgba(31, 53, 43, 0.14);
+  backdrop-filter: blur(18px);
 }
 
 .app-navigation::before {
@@ -96,8 +113,11 @@ summary:focus-visible {
 }
 
 .app-navigation-link {
-  color: #7c847d;
-  font-weight: 650;
+  color: #667069;
+  min-height: 3.7rem;
+  justify-content: center;
+  border-radius: 0.85rem;
+  font-weight: 680;
 }
 
 .app-navigation-link:hover {
@@ -105,15 +125,16 @@ summary:focus-visible {
 }
 
 .app-navigation-link[data-active] {
+  background: var(--classic-sage);
   color: var(--classic-forest);
 }
 
 .app-navigation-link[data-active]::before {
-  background: var(--classic-gold);
+  display: none;
 }
 
 .app-navigation-link[data-active] .app-navigation-icon {
-  background: var(--classic-sage);
+  background: transparent;
   color: var(--classic-forest);
 }
 
@@ -126,6 +147,8 @@ summary:focus-visible {
 }
 
 .app-floating-action {
+  right: 1rem;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
   border: 1px solid var(--classic-forest);
   background: var(--classic-forest);
   color: var(--classic-paper);
@@ -145,7 +168,7 @@ summary:focus-visible {
 .onboarding-card,
 .report-metrics article,
 .kpi-card {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(31, 53, 43, 0.13);
   background: var(--classic-paper);
   color: var(--ink);
   box-shadow: var(--shadow-card);
@@ -164,9 +187,9 @@ summary:focus-visible {
 
 .page-heading {
   align-items: center;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #d5d7cf;
-  padding: 0.35rem 0 1.25rem;
+  margin-bottom: 1.2rem;
+  border-bottom: 1px solid rgba(31, 53, 43, 0.14);
+  padding: 0.5rem 0 1.35rem;
   background: transparent;
   box-shadow: none;
 }
@@ -181,9 +204,9 @@ summary:focus-visible {
 
 .page-heading-icon,
 .sidebar-card-icon {
-  border: 1px solid #cfd4cc;
-  border-radius: 0.75rem;
-  background: var(--classic-paper);
+  border: 1px solid #cdd7cd;
+  border-radius: 0.85rem;
+  background: var(--classic-sage);
   color: var(--classic-forest);
   box-shadow: none;
 }
@@ -213,13 +236,13 @@ summary:focus-visible {
 .auth-form-card h1,
 .password-card h1,
 .onboarding-header h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-display);
   font-weight: 400;
   letter-spacing: -0.035em;
 }
 
 .page-heading h1 {
-  font-size: clamp(1.9rem, 5vw, 2.7rem);
+  font-size: clamp(2rem, 5vw, 2.85rem);
 }
 
 .page-heading p:not(.page-eyebrow),
@@ -243,8 +266,8 @@ summary:focus-visible {
 .premium-button,
 .secondary-button,
 .danger-button {
-  min-height: 2.85rem;
-  border-radius: 0.72rem;
+  min-height: 3.1rem;
+  border-radius: 0.8rem;
   font-weight: 720;
 }
 
@@ -288,10 +311,10 @@ summary:focus-visible {
 }
 
 .premium-field {
-  min-height: 2.9rem;
+  min-height: 3.15rem;
   border-color: #c9cdc6;
-  border-radius: 0.68rem;
-  background: #fffefa;
+  border-radius: 0.78rem;
+  background: var(--classic-paper);
   color: var(--ink);
   box-shadow: none;
 }
@@ -363,9 +386,9 @@ summary:focus-visible {
   overflow: hidden;
   min-height: auto;
   margin-inline: 0;
-  border: 1px solid #d2d5cd;
-  border-radius: 1rem;
-  padding: 0 1rem 1rem;
+  border: 1px solid rgba(31, 53, 43, 0.14);
+  border-radius: 1.35rem;
+  padding: 0 1.05rem 1.05rem;
   background: var(--classic-paper);
   box-shadow: var(--shadow-card);
 }
@@ -379,10 +402,10 @@ summary:focus-visible {
   position: relative;
   z-index: 2;
   display: flex;
-  min-height: 4.4rem;
+  min-height: 4.65rem;
   align-items: center;
   gap: 0.8rem;
-  border-bottom: 1px solid #d9dbd4;
+  border-bottom: 1px solid rgba(31, 53, 43, 0.12);
 }
 
 .editorial-wordmark {
@@ -405,7 +428,7 @@ summary:focus-visible {
 
 .editorial-wordmark strong {
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-display);
   font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -423,7 +446,7 @@ summary:focus-visible {
   display: none;
   align-items: center;
   gap: 2rem;
-  color: #737b74;
+  color: #68766d;
   font-size: 0.65rem;
   font-weight: 650;
 }
@@ -472,8 +495,8 @@ summary:focus-visible {
 
 .editorial-hero-layout {
   display: grid;
-  gap: 1.2rem;
-  padding-top: 1.5rem;
+  gap: 1.35rem;
+  padding-top: 1.65rem;
 }
 
 .editorial-hero-copy {
@@ -486,7 +509,7 @@ summary:focus-visible {
 .editorial-kicker {
   margin: 0;
   color: #637366;
-  font-size: 0.65rem;
+  font-size: 0.67rem;
   font-weight: 760;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -500,16 +523,16 @@ summary:focus-visible {
   max-width: 34rem;
   margin: 0.85rem 0 0;
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2.35rem, 11vw, 4.7rem);
+  font-family: var(--classic-display);
+  font-size: clamp(2.35rem, 10.5vw, 4.55rem);
   font-weight: 400;
   letter-spacing: -0.055em;
   line-height: 0.96;
 }
 
 .editorial-hero-copy h1 em {
-  display: inline;
-  color: #607064;
+  display: block;
+  color: #66786a;
   font-weight: 400;
 }
 
@@ -517,7 +540,7 @@ summary:focus-visible {
   max-width: 30rem;
   margin: 1rem 0 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   line-height: 1.65;
 }
 
@@ -532,12 +555,12 @@ summary:focus-visible {
 .editorial-primary-action,
 .editorial-text-action {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 3rem;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.68rem;
-  font-size: 0.72rem;
+  border-radius: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 720;
   text-decoration: none;
 }
@@ -576,10 +599,11 @@ summary:focus-visible {
   overflow: hidden;
   display: grid;
   align-content: stretch;
-  border: 1px solid #cbd0ca;
-  border-radius: 0.9rem;
-  background: #edf0eb;
-  color: var(--classic-forest);
+  border: 1px solid #1f352b;
+  border-radius: 1.1rem;
+  background: var(--classic-forest);
+  color: var(--classic-paper);
+  box-shadow: 0 18px 40px rgba(31, 53, 43, 0.16);
 }
 
 .editorial-art-geometry,
@@ -590,17 +614,17 @@ summary:focus-visible {
 .editorial-art-balance {
   position: static;
   display: flex;
-  min-height: 9rem;
+  min-height: 10rem;
   flex-direction: column;
   justify-content: center;
   border: 0;
   border-radius: 0;
-  padding: 1.25rem;
+  padding: 1.4rem;
   background: transparent;
 }
 
 .editorial-art-balance small {
-  color: #68746c;
+  color: #c6d0c9;
   font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -609,11 +633,11 @@ summary:focus-visible {
 
 .editorial-art-balance strong {
   margin-top: 0.35rem;
-  color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 9vw, 3.5rem);
-  font-weight: 400;
-  letter-spacing: -0.05em;
+  color: var(--classic-paper);
+  font-family: var(--classic-sans);
+  font-size: clamp(2rem, 8vw, 3.35rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
   line-height: 1;
 }
 
@@ -622,7 +646,7 @@ summary:focus-visible {
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.75rem;
-  color: #6b746d;
+  color: #c1cbc4;
   font-size: 0.59rem;
 }
 
@@ -630,16 +654,16 @@ summary:focus-visible {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 50%;
-  background: var(--classic-positive);
+  background: #d7b875;
 }
 
 .editorial-art-ledger {
   position: static;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid #ccd1cb;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0;
-  background: var(--classic-forest);
+  background: #192c24;
   color: var(--classic-paper);
 }
 
@@ -664,7 +688,8 @@ summary:focus-visible {
 .editorial-art-ledger strong {
   overflow: hidden;
   color: var(--classic-paper);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -683,7 +708,7 @@ summary:focus-visible {
 }
 
 .dashboard-page .period-switcher {
-  border-radius: 0.72rem;
+  border-radius: 0.9rem;
 }
 
 .dashboard-page .period-switcher a {
@@ -729,7 +754,7 @@ summary:focus-visible {
 }
 
 .editorial-section-heading h2 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-display);
   font-size: clamp(1.45rem, 4vw, 2rem);
   font-weight: 400;
   letter-spacing: -0.035em;
@@ -749,10 +774,10 @@ summary:focus-visible {
 }
 
 .dashboard-page .kpi-card {
-  min-height: 9.2rem;
+  min-height: 9.6rem;
   border-color: #d6d8d1;
-  border-radius: 0.85rem;
-  padding: 1rem;
+  border-radius: 1rem;
+  padding: 1.05rem;
   background: var(--classic-paper);
   color: var(--ink);
   box-shadow: none;
@@ -803,14 +828,14 @@ summary:focus-visible {
 
 .dashboard-page .kpi-card strong {
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  letter-spacing: -0.04em;
+  font-family: var(--classic-sans);
+  font-weight: 680;
+  letter-spacing: -0.045em;
 }
 
 .dashboard-page .surface-card {
   border-color: #d6d8d1;
-  border-radius: 0.9rem;
+  border-radius: 1.1rem;
   background: var(--classic-paper);
   color: var(--ink);
   box-shadow: var(--shadow-card);
@@ -818,7 +843,7 @@ summary:focus-visible {
 
 .editorial-action-section,
 .editorial-dashboard-panel {
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .editorial-section-title .section-link {
@@ -831,7 +856,8 @@ summary:focus-visible {
 
 .dashboard-page .quick-action-card {
   border-color: #dcddd7;
-  border-radius: 0.72rem;
+  min-height: 4.2rem;
+  border-radius: 0.9rem;
   background: #faf9f4;
   color: var(--ink);
 }
@@ -886,9 +912,9 @@ summary:focus-visible {
   gap: 0.75rem;
   margin-top: 1rem;
   border: 1px solid #cfd4ce;
-  border-radius: 0.85rem;
-  padding: 1rem;
-  background: #e4e9e2;
+  border-radius: 1rem;
+  padding: 1.1rem;
+  background: #e7ece5;
   color: var(--classic-forest);
   box-shadow: none;
 }
@@ -910,7 +936,7 @@ summary:focus-visible {
 .editorial-briefing > div > strong {
   margin-top: 0.25rem;
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-display);
   font-size: 1.15rem;
   font-weight: 400;
 }
@@ -998,9 +1024,9 @@ summary:focus-visible {
   display: block;
   margin-top: 0.12rem;
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-sans);
   font-size: 0.72rem;
-  font-weight: 400;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -1020,7 +1046,7 @@ summary:focus-visible {
 
 .operation-composer,
 .sidebar-card {
-  border-radius: 0.95rem;
+  border-radius: 1.1rem;
 }
 
 .operation-composer {
@@ -1043,7 +1069,7 @@ summary:focus-visible {
 
 .operation-composer-header h2 {
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--classic-display);
   font-weight: 400;
 }
 
@@ -1079,7 +1105,8 @@ summary:focus-visible {
 
 .operation-fieldset {
   border-color: #d6d8d2;
-  background: #faf9f5;
+  border-radius: 0.9rem;
+  background: #fbfaf6;
 }
 
 .operation-fieldset legend {
@@ -1122,11 +1149,11 @@ summary:focus-visible {
 
 .stock-command-hero {
   overflow: hidden;
-  border: 1px solid #cbd1ca;
-  border-radius: 0.95rem;
-  background: #e7ebe5;
-  color: var(--classic-forest);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--classic-forest);
+  border-radius: 1.15rem;
+  background: var(--classic-forest);
+  color: var(--classic-paper);
+  box-shadow: 0 18px 40px rgba(31, 53, 43, 0.15);
 }
 
 .stock-command-hero::after,
@@ -1135,39 +1162,39 @@ summary:focus-visible {
 }
 
 .stock-command-copy > span {
-  color: #667568;
+  color: #d4b982;
 }
 
 .stock-command-copy h2 {
-  color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  color: var(--classic-paper);
+  font-family: var(--classic-display);
   font-weight: 400;
 }
 
 .stock-command-copy p {
-  color: #626e65;
+  color: #c5d0c9;
 }
 
 .stock-hero-link {
-  border-color: var(--classic-forest);
-  background: var(--classic-forest);
-  color: var(--classic-paper);
+  border-color: var(--classic-paper);
+  background: var(--classic-paper);
+  color: var(--classic-forest);
 }
 
 .stock-live-pill {
-  border-color: #c9d2ca;
-  background: var(--classic-paper);
-  color: #45604e;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
+  color: #e7ede9;
 }
 
 .stock-live-pill > span {
-  background: var(--classic-positive);
+  background: #d7b875;
   box-shadow: none;
 }
 
 .stock-kpi-grid article {
   border-color: #d6d8d2;
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   background: var(--classic-paper);
   color: var(--ink);
   box-shadow: none;
@@ -1198,15 +1225,15 @@ summary:focus-visible {
 
 .stock-kpi-grid strong {
   color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
+  font-family: var(--classic-sans);
+  font-weight: 700;
 }
 
 .stock-toolbar,
 .stock-tool-panel,
 .stock-history-card {
   border-color: #d6d8d2;
-  border-radius: 0.9rem;
+  border-radius: 1.05rem;
   background: var(--classic-paper);
   box-shadow: var(--shadow-card);
 }
@@ -1271,7 +1298,7 @@ summary:focus-visible {
 
 .stock-product-card {
   border-color: #d6d8d2;
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   background: var(--classic-paper);
   color: var(--ink);
   box-shadow: none;
@@ -1367,8 +1394,8 @@ summary:focus-visible {
 }
 
 .stock-quantity-panel > div:first-child strong {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
+  font-family: var(--classic-sans);
+  font-weight: 720;
 }
 
 .stock-value-stack p {
@@ -1479,11 +1506,11 @@ summary:focus-visible {
 /* Reports */
 
 .report-spotlight {
-  border: 1px solid #cbd1ca;
-  border-radius: 0.95rem;
-  background: #e6ebe5;
-  color: var(--classic-forest);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--classic-forest);
+  border-radius: 1.15rem;
+  background: var(--classic-forest);
+  color: var(--classic-paper);
+  box-shadow: 0 18px 40px rgba(31, 53, 43, 0.15);
 }
 
 .report-spotlight::before,
@@ -1492,35 +1519,37 @@ summary:focus-visible {
 }
 
 .report-spotlight p {
-  color: #657069;
+  color: #c5d0c9;
 }
 
 .report-spotlight h2 {
-  color: var(--classic-forest);
-  font-family: Georgia, "Times New Roman", serif;
+  color: var(--classic-paper);
+  font-family: var(--classic-display);
   font-weight: 400;
 }
 
 .report-spotlight > div:first-child > span {
-  color: #68776b;
+  color: #d4b982;
 }
 
 .report-spotlight-stats > div {
-  border-color: #ccd2cc;
-  background: rgba(255, 254, 250, 0.62);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .report-spotlight-stats small {
-  color: #68736b;
+  color: #bdc9c1;
 }
 
 .report-spotlight-stats strong {
-  color: var(--classic-forest);
+  color: var(--classic-paper);
+  font-family: var(--classic-sans);
+  font-weight: 700;
 }
 
 .report-filter,
 .report-section {
-  border-radius: 0.9rem;
+  border-radius: 1.05rem;
 }
 
 .report-filter {
@@ -1529,7 +1558,7 @@ summary:focus-visible {
 }
 
 .report-metrics article {
-  border-radius: 0.82rem;
+  border-radius: 1rem;
   box-shadow: none;
 }
 
@@ -1650,8 +1679,8 @@ summary:focus-visible {
 .auth-showcase {
   position: relative;
   display: flex;
-  min-height: clamp(21rem, 52vh, 25rem);
-  padding: 1rem;
+  min-height: clamp(22rem, 54vh, 27rem);
+  padding: 1.15rem;
   background: var(--classic-forest);
   color: var(--classic-paper);
 }
@@ -1666,7 +1695,7 @@ summary:focus-visible {
 
 .auth-family-photo img {
   object-fit: cover;
-  object-position: 50% 30%;
+  object-position: 50% 27%;
 }
 
 .auth-brand,
@@ -1680,19 +1709,19 @@ summary:focus-visible {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(22, 35, 28, 0.32) 0%, transparent 34%),
+    linear-gradient(180deg, rgba(22, 35, 28, 0.38) 0%, transparent 36%),
     linear-gradient(
       0deg,
-      rgba(22, 35, 28, 0.9) 0%,
-      rgba(22, 35, 28, 0.36) 44%,
-      transparent 72%
+      rgba(22, 35, 28, 0.92) 0%,
+      rgba(22, 35, 28, 0.42) 48%,
+      transparent 76%
     );
   content: "";
 }
 
 .auth-brand .brand-mark {
   border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(32, 49, 41, 0.84);
+  background: rgba(31, 53, 43, 0.88);
   color: var(--classic-paper);
 }
 
@@ -1708,7 +1737,7 @@ summary:focus-visible {
 .auth-kicker {
   display: none;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(32, 49, 41, 0.72);
+  background: rgba(31, 53, 43, 0.74);
   color: var(--classic-paper);
 }
 
@@ -1720,8 +1749,8 @@ summary:focus-visible {
 .auth-showcase-copy h2 {
   margin-top: 0.8rem;
   color: var(--classic-paper);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.8rem, 8vw, 2.75rem);
+  font-family: var(--classic-display);
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 400;
   letter-spacing: -0.04em;
   line-height: 1.02;
@@ -1758,17 +1787,17 @@ summary:focus-visible {
 
 .auth-form-zone {
   min-height: auto;
-  padding: 0 1rem 1rem;
+  padding: 0 0.85rem 1rem;
 }
 
 .auth-form-card {
   position: relative;
   z-index: 2;
-  margin: -1rem auto 0;
-  border-color: #d6d8d1;
-  border-radius: 0.95rem;
+  margin: -1.65rem auto 0;
+  border-color: rgba(31, 53, 43, 0.14);
+  border-radius: 1.2rem;
   background: var(--classic-paper);
-  box-shadow: 0 12px 34px rgba(37, 48, 41, 0.09);
+  box-shadow: 0 20px 46px rgba(31, 53, 43, 0.13);
 }
 
 .auth-page .auth-mobile-brand {
@@ -1781,6 +1810,7 @@ summary:focus-visible {
 
 .auth-links a {
   color: #55695a;
+  text-underline-offset: 0.2rem;
 }
 
 .auth-trust {
@@ -1794,7 +1824,7 @@ summary:focus-visible {
 
 .onboarding-card {
   border-color: #d6d8d1;
-  border-radius: 0.95rem;
+  border-radius: 1.2rem;
   background: var(--classic-paper);
 }
 
@@ -1843,7 +1873,7 @@ summary:focus-visible {
 
 @media (min-width: 640px) {
   .dashboard-editorial-hero {
-    padding: 0 1.25rem 1.25rem;
+    padding: 0 1.4rem 1.4rem;
   }
 
   .editorial-section-heading > p {
@@ -1882,13 +1912,17 @@ summary:focus-visible {
 }
 
 @media (min-width: 860px) {
+  .auth-page {
+    grid-template-columns: minmax(0, 1.15fr) minmax(25rem, 0.85fr);
+  }
+
   .auth-kicker {
     display: inline-flex;
   }
 
   .auth-showcase {
     min-height: 100vh;
-    padding: 2rem;
+    padding: 2.25rem;
   }
 
   .auth-family-photo img {
@@ -1911,7 +1945,7 @@ summary:focus-visible {
 
   .auth-form-zone {
     min-height: 100vh;
-    padding: 2rem;
+    padding: 2.25rem;
   }
 
   .auth-form-card {
@@ -1920,10 +1954,32 @@ summary:focus-visible {
 }
 
 @media (min-width: 1024px) {
+  .app-page {
+    padding: 1.75rem 2rem 3rem 8.75rem;
+  }
+
   .app-navigation {
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    width: 7rem;
+    overflow: visible;
+    border-width: 0 1px 0 0;
+    border-radius: 0;
+    padding: 1.35rem 0.75rem;
     border-right-color: #d4d6ce;
     background: var(--classic-paper);
     box-shadow: 8px 0 26px rgba(37, 48, 41, 0.05);
+  }
+
+  .app-navigation-link {
+    min-height: 4.2rem;
+  }
+
+  .app-floating-action {
+    right: 2rem;
+    bottom: 2rem;
   }
 
   .dashboard-page {
@@ -1931,12 +1987,12 @@ summary:focus-visible {
   }
 
   .dashboard-editorial-hero {
-    padding: 0 1.5rem 1.5rem;
+    padding: 0 1.75rem 1.75rem;
   }
 
   .editorial-hero-layout {
-    gap: 2rem;
-    padding: 2rem 0 0.5rem;
+    gap: 2.4rem;
+    padding: 2.25rem 0 0.65rem;
   }
 }
 

@@ -1,26 +1,26 @@
-# Kayembe Signature — système visuel
+# Kayembe Moderne Classique — système visuel raffiné
 
 ## Intention
 
-La proposition C associe la clarté éditoriale d’une maison patrimoniale à
-l’efficacité d’un outil de pilotage quotidien. L’interface doit paraître
-exclusive sans devenir décorative : chaque contraste guide une action ou une
-lecture financière.
+L’identité associe la chaleur d’une maison familiale à la précision d’un outil
+de pilotage contemporain. Elle doit rester intemporelle, claire et rassurante :
+chaque contraste guide une action ou une lecture financière, sans effet
+décoratif gratuit.
 
 ## Palette
 
 | Rôle             | Couleur   | Usage                             |
 | ---------------- | --------- | --------------------------------- |
-| Fond principal   | `#F7F3E8` | Pages et zones respirantes        |
-| Surface          | `#FFFDF7` | Cartes, formulaires et tableaux   |
-| Ivoire chaud     | `#EEE8DA` | Surfaces secondaires              |
-| Olive clair      | `#B8C19F` | Héros, sélections et repères      |
-| Sauge            | `#DDE1CB` | États neutres et icônes           |
-| Olive profond    | `#263120` | Texte fort, navigation et boutons |
-| Olive secondaire | `#667154` | Texte secondaire et graphiques    |
-| Laiton vieilli   | `#A48145` | Accent éditorial et état actif    |
-| Positif          | `#557A45` | Succès uniquement                 |
-| Alerte           | `#805317` | Attention et stock bas            |
+| Fond principal   | `#F5F2EA` | Pages et zones respirantes        |
+| Surface          | `#FFFDF8` | Cartes, formulaires et tableaux   |
+| Ivoire chaud     | `#EEEDE6` | Surfaces secondaires              |
+| Olive clair      | `#8C9A82` | Repères et surfaces de contexte   |
+| Sauge            | `#DDE5D9` | Sélections, états neutres, icônes |
+| Vert forêt       | `#1F352B` | Texte fort, héros et boutons      |
+| Olive secondaire | `#5D7162` | Texte secondaire et graphiques    |
+| Laiton vieilli   | `#B2874D` | Accent éditorial ponctuel         |
+| Positif          | `#426F55` | Succès uniquement                 |
+| Alerte           | `#936526` | Attention et stock bas            |
 | Danger           | `#A24E3F` | Annulation et erreur uniquement   |
 
 Tous les couples texte/fond utilisés dans les parcours essentiels doivent
@@ -28,20 +28,21 @@ atteindre WCAG 2.2 AA.
 
 ## Typographie
 
-- Les titres de héros, résultats majeurs et chiffres de synthèse utilisent une
-  pile serif éditoriale (`Georgia`, `Times New Roman`, serif).
-- Les contrôles, libellés, textes et montants opérationnels utilisent la pile
-  système sans-serif.
+- Les titres de héros utilisent une pile serif éditoriale classique.
+- Les contrôles, libellés, textes et tous les montants utilisent une pile
+  système sans-serif moderne.
 - Les montants utilisent des chiffres tabulaires et ne sont jamais abrégés de
   manière ambiguë.
 
 ## Composants
 
 - Les cartes ont des rayons modérés, une bordure olive très légère et une ombre
-  chaude discrète.
+  chaude à peine perceptible.
 - Le bouton principal est olive profond ; le bouton secondaire reste ivoire.
-- La navigation principale conserve cinq entrées et devient une barre olive
-  profonde sur mobile comme sur bureau.
+- La navigation principale conserve cinq entrées. Sur mobile, elle prend la
+  forme d’un dock ivoire compact ; sur bureau, elle devient une barre latérale.
+- Une seule surface vert forêt forte est utilisée par écran pour poser la
+  hiérarchie sans assombrir l’ensemble.
 - Les surfaces olive clair sont réservées aux zones de contexte ou de décision,
   pas à chaque carte.
 - Les états vide, chargement, succès et erreur gardent toujours un texte et une
