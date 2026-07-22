@@ -8,6 +8,7 @@
 - Les documents financiers validés et les écritures finalisées sont immuables ; toute correction crée une écriture inverse conservant les références aux comptes de trésorerie.
 - Les routes métier redirigent les visiteurs non authentifiés et les rôles sont vérifiés dans les RPC, indépendamment de l'interface.
 - Les clés d'idempotence sont isolées par foyer et liées à l'empreinte complète de l'opération afin de refuser une relance modifiée.
+- Les activations et renouvellements IPTV passent par une RPC contrôlée qui crée atomiquement la vente, l’écriture, le client et la période ; les périodes liées à une écriture sont immuables hors annulation.
 - Les montants utilisent `numeric(20,4)` dans PostgreSQL et `decimal.js` côté domaine TypeScript.
 - Les fonctions `security definer` fixent `search_path=public` et révoquent/accordent explicitement l'exécution.
 - La clé `service_role` est interdite dans le navigateur et ne doit jamais être préfixée par `NEXT_PUBLIC_`.

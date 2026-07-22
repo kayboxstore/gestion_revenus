@@ -1,6 +1,7 @@
 import "./globals.css";
 import "./stock.css";
 import "./modern-classic.css";
+import "./iptv.css";
 import type { Metadata, Viewport } from "next";
 import { APP_BRAND } from "@/lib/brand";
 import { PwaRegister } from "./pwa-register";

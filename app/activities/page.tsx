@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { updateActivity } from "@/app/actions/administration";
 import { AppIcon, type AppIconName } from "@/components/app-icon";
 import { AppNavigation } from "@/components/app-navigation";
@@ -112,6 +113,16 @@ export default async function Page({
                   {activityDescriptions[activity.code] ??
                     "Activité personnalisée du foyer."}
                 </p>
+                {activity.code === "IPTV" && activity.active && (
+                  <Link
+                    href="/activities/iptv"
+                    className="activity-workspace-link"
+                  >
+                    <AppIcon name="members" className="h-4 w-4" />
+                    Gérer les clients et échéances
+                    <AppIcon name="arrow" className="h-4 w-4" />
+                  </Link>
+                )}
                 {canManage ? (
                   <form action={updateActivity} className="activity-form">
                     <input type="hidden" name="id" value={activity.id} />

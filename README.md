@@ -1,6 +1,6 @@
 # Gestion des revenus — Famille Kayembe
 
-Application Next.js/Supabase mobile-first pour gérer revenus, dépenses, achats, transferts, épargne, stock et rentabilité d'un foyer sans confondre flux de trésorerie et revenu.
+Application Next.js/Supabase mobile-first pour gérer revenus, dépenses, achats, transferts, épargne, stock, clients IPTV et rentabilité d'un foyer sans confondre flux de trésorerie et revenu.
 
 ## Démarrage local
 

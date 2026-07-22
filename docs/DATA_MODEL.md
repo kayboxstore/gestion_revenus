@@ -32,7 +32,7 @@ Statuts des écritures : `draft`, `posted`, `reversed`. Le statut `deleted` n’
 - `sales`: numéro, activité, client, date, statut, devise, totaux et échéance.
 - `sale_items`: produit/service, description, quantité, prix, remise, taxe, coût et totaux.
 - `payments`: vente facultative, contact, compte, montant, devise, taux, date et statut.
-- `iptv_subscriptions`: client, plan, identifiant, activation, expiration, état et vente source.
+- `iptv_subscriptions`: client, plan, identifiant, activation, expiration, état, vente/écriture source et période précédente lors d’un renouvellement.
 - `billiard_sessions`: début/fin facultatifs, parties/durée, tarif et vente source.
 
 Statuts de vente : `draft`, `confirmed`, `partially_paid`, `paid`, `overdue`, `cancelled`.
@@ -85,4 +85,3 @@ Le stock courant et le coût moyen sont dérivés de mouvements validés ou main
 - annulation par écriture inverse ;
 - soumission répétée avec même clé d’idempotence ;
 - accès RLS inter-foyers refusé pour chaque domaine.
-

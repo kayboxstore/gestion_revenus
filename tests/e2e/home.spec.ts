@@ -23,6 +23,10 @@ test("protects business routes and exposes complete French authentication", asyn
   if (configured) {
     await expect(page).toHaveURL(/\/login\?next=/);
   }
+  await page.goto("/activities/iptv");
+  if (configured) {
+    await expect(page).toHaveURL(/\/login\?next=/);
+  }
   await page.goto("/login");
   const familyPortrait = page.getByAltText("Portrait du couple Kayembe");
   await expect(familyPortrait).toBeVisible();
@@ -102,6 +106,54 @@ test("onboards an authenticated owner and persists an IPTV cash sale", async ({
   await billiard.locator('select[name="active"]').selectOption("true");
   await billiard.getByRole("button", { name: "Enregistrer" }).click();
   await expect(page.getByText("Activité mise à jour.")).toBeVisible();
+
+  await page
+    .getByRole("link", { name: "Gérer les clients et échéances" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Clients et échéances" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Mensuel", { exact: true }).first(),
+  ).toBeVisible();
+  const activationPanel = page.locator("details.iptv-action-panel");
+  await activationPanel.locator("summary").click();
+  await activationPanel.getByLabel("Nom du client").fill("Client IPTV E2E");
+  await activationPanel.getByLabel("Téléphone").fill("+243810000111");
+  await activationPanel.getByLabel("Identifiant IPTV").fill("client-iptv-e2e");
+  await activationPanel
+    .getByLabel("Compte d’encaissement")
+    .selectOption({ label: "Caisse USD · USD" });
+  await activationPanel
+    .getByRole("button", { name: "Activer et enregistrer la vente" })
+    .click();
+  await expect(
+    page.getByText("Client activé, vente et abonnement enregistrés ensemble."),
+  ).toBeVisible();
+  const iptvCard = page
+    .locator("article.iptv-subscription-card")
+    .filter({ hasText: "Client IPTV E2E" });
+  await expect(iptvCard).toContainText("Actif");
+  const renewalPanel = iptvCard.locator("details.iptv-renew-panel");
+  await renewalPanel.locator("summary").click();
+  await renewalPanel
+    .getByLabel("Compte d’encaissement")
+    .selectOption({ label: "Caisse USD · USD" });
+  await renewalPanel
+    .getByRole("button", { name: "Renouveler et enregistrer la vente" })
+    .click();
+  await expect(
+    page.getByText("Abonnement renouvelé, vente et échéance enregistrées."),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("article.iptv-subscription-card")
+      .filter({ hasText: "Client IPTV E2E" }),
+  ).toHaveCount(1);
+  await page.screenshot({
+    path: "test-results/screens/iptv-mobile.png",
+    fullPage: true,
+  });
 
   await page.getByRole("link", { name: "Accueil" }).click();
   await page.getByRole("link", { name: "Plus" }).click();
