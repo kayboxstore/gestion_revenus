@@ -21,6 +21,13 @@ test("protects business routes and exposes complete French authentication", asyn
   const familyPortrait = page.getByAltText("Portrait du couple Kayembe");
   await expect(familyPortrait).toBeVisible();
   await expect(familyPortrait).toHaveAttribute("src", /famille-kayembe/);
+  await expect
+    .poll(() =>
+      familyPortrait.evaluate(
+        (image) => (image as HTMLImageElement).naturalWidth,
+      ),
+    )
+    .toBeGreaterThan(0);
   await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(
