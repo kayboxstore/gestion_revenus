@@ -11,6 +11,7 @@ const pool = databaseUrl ? new Pool({ connectionString: databaseUrl }) : null;
 type References = {
   householdId: string;
   iptvProduct: string;
+  iptvPlan: string;
   miniUpsProduct: string;
   boxProduct: string;
   cashUsd: string;
@@ -146,6 +147,45 @@ async function record(
   );
 }
 
+async function recordIptv(
+  client: PoolClient,
+  input: {
+    planId?: string;
+    renewedFromId?: string | null;
+    customerName?: string;
+    customerPhone?: string | null;
+    customerIdentifier?: string;
+    activationDate?: string;
+    paymentType?: "cash_sale" | "credit_sale";
+    cashAccountId?: string | null;
+    dueDate?: string | null;
+    rate?: string;
+    key?: string;
+  },
+) {
+  return one<{ id: string }>(
+    client,
+    `select record_iptv_subscription_sale(
+      $1::uuid,$2::uuid,$3::uuid,$4::text,$5::text,$6::text,$7::date,
+      $8::text,$9::uuid,$10::date,$11::numeric,$12::text
+    ) as id`,
+    [
+      refs.householdId,
+      input.renewedFromId ?? null,
+      input.planId ?? refs.iptvPlan,
+      input.customerName ?? "Client IPTV test",
+      input.customerPhone ?? "+243810000000",
+      input.customerIdentifier ?? `iptv-${randomUUID()}`,
+      input.activationDate ?? "2026-07-22",
+      input.paymentType ?? "cash_sale",
+      input.cashAccountId === undefined ? refs.cashUsd : input.cashAccountId,
+      input.dueDate ?? null,
+      input.rate ?? "1",
+      input.key ?? randomUUID(),
+    ],
+  );
+}
+
 async function recordOpeningStock(
   client: PoolClient,
   input: {
@@ -250,6 +290,11 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         "insert into savings_goals(household_id,name,target_amount,currency) values($1,'Urgences',500,'USD') returning id",
         [household.id],
       );
+      const iptvPlan = await one<{ id: string }>(
+        client,
+        "select id from iptv_plans where household_id=$1 and active order by duration_days limit 1",
+        [household.id],
+      );
       const product = (sku: string) => {
         const found = products.rows.find((row) => row.sku === sku);
         if (!found) throw new Error(`Missing product ${sku}`);
@@ -263,6 +308,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       return {
         householdId: household.id,
         iptvProduct: product("IPTV-STD"),
+        iptvPlan: iptvPlan.id,
         miniUpsProduct: product("MINI-UPS"),
         boxProduct: product("ATV-BOX"),
         cashUsd: account("Caisse USD"),
@@ -304,6 +350,195 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
       );
       expect(lines.count).toBe("2");
       expect(movements.count).toBe("0");
+    });
+  });
+
+  it("atomically activates, renews and reverses an IPTV subscription term", async () => {
+    await asUser(ownerId, async (client) => {
+      const identifier = `kay-${randomUUID()}`;
+      const activationKey = randomUUID();
+      const activation = await recordIptv(client, {
+        customerName: "Grâce Kayembe",
+        customerPhone: "+243810203040",
+        customerIdentifier: identifier,
+        activationDate: "2026-07-22",
+        rate: "2",
+        key: activationKey,
+      });
+      const activated = await one<{
+        activation_date: string;
+        expiration_date: string;
+        status: string;
+        customer: string;
+        sale_status: string;
+        entry_status: string;
+        entry_id: string;
+        sale_id: string;
+        total_base: string;
+      }>(
+        client,
+        `select s.activation_date::text,s.expiration_date::text,s.status,
+          c.name as customer,sa.status::text as sale_status,
+          e.status::text as entry_status,e.id as entry_id,sa.id as sale_id,
+          sa.total_base::text
+         from iptv_subscriptions s
+         join contacts c on c.id=s.contact_id
+         join sales sa on sa.id=s.sale_id
+         join journal_entries e on e.id=s.journal_entry_id
+         where s.id=$1`,
+        [activation.id],
+      );
+      expect(activated).toMatchObject({
+        activation_date: "2026-07-22",
+        expiration_date: "2026-08-20",
+        status: "active",
+        customer: "Grâce Kayembe",
+        sale_status: "paid",
+        entry_status: "posted",
+        total_base: "10.0000",
+      });
+      const activationTotals = await one<{
+        debit: string;
+        credit: string;
+        unit_rate: boolean;
+      }>(
+        client,
+        `select sum(debit_base)::text as debit,sum(credit_base)::text as credit,
+          bool_and(exchange_rate=1) as unit_rate
+         from journal_lines where journal_entry_id=$1`,
+        [activated.entry_id],
+      );
+      expect(activationTotals.debit).toBe("10.0000");
+      expect(activationTotals.credit).toBe("10.0000");
+      expect(activationTotals.unit_rate).toBe(true);
+      const serviceMovement = await one<{ count: string }>(
+        client,
+        "select count(*)::text as count from stock_movements where reference_id=$1",
+        [activated.sale_id],
+      );
+      expect(serviceMovement.count).toBe("0");
+
+      const activationRetry = await recordIptv(client, {
+        customerName: "Grâce Kayembe",
+        customerPhone: "+243810203040",
+        customerIdentifier: identifier,
+        activationDate: "2026-07-22",
+        key: activationKey,
+      });
+      expect(activationRetry.id).toBe(activation.id);
+
+      const renewalKey = randomUUID();
+      const renewal = await recordIptv(client, {
+        renewedFromId: activation.id,
+        activationDate: "2026-08-15",
+        paymentType: "credit_sale",
+        cashAccountId: null,
+        dueDate: "2026-08-25",
+        key: renewalKey,
+      });
+      const renewed = await one<{
+        activation_date: string;
+        expiration_date: string;
+        renewed_from_id: string;
+        sale_status: string;
+        due_date: string;
+        entry_id: string;
+      }>(
+        client,
+        `select s.activation_date::text,s.expiration_date::text,s.renewed_from_id,
+          sa.status::text as sale_status,sa.due_date::text,e.id as entry_id
+         from iptv_subscriptions s
+         join sales sa on sa.id=s.sale_id
+         join journal_entries e on e.id=s.journal_entry_id
+         where s.id=$1`,
+        [renewal.id],
+      );
+      expect(renewed).toMatchObject({
+        activation_date: "2026-08-21",
+        expiration_date: "2026-09-19",
+        renewed_from_id: activation.id,
+        sale_status: "confirmed",
+        due_date: "2026-08-25",
+      });
+      const receivable = await one<{ debit: string }>(
+        client,
+        `select coalesce(sum(l.debit_base),0)::text as debit
+         from journal_lines l join ledger_accounts a on a.id=l.ledger_account_id
+         where l.journal_entry_id=$1 and a.code='receivable'`,
+        [renewed.entry_id],
+      );
+      expect(receivable.debit).toBe("10.0000");
+
+      const workspace = await one<{
+        subscription_id: string;
+        lifecycle_status: string;
+        total_count: string;
+      }>(
+        client,
+        `select subscription_id,lifecycle_status,total_count::text
+         from get_iptv_subscriptions($1,'all',null,'2026-08-15',24,0)
+         where customer_identifier=$2`,
+        [refs.householdId, identifier],
+      );
+      expect(workspace).toEqual({
+        subscription_id: renewal.id,
+        lifecycle_status: "active",
+        total_count: "1",
+      });
+
+      await client.query("savepoint expected_iptv_idempotency_conflict");
+      await expect(
+        recordIptv(client, {
+          renewedFromId: activation.id,
+          activationDate: "2026-08-16",
+          paymentType: "credit_sale",
+          cashAccountId: null,
+          dueDate: "2026-08-25",
+          key: renewalKey,
+        }),
+      ).rejects.toThrow(/idempotency key conflict/);
+      await client.query(
+        "rollback to savepoint expected_iptv_idempotency_conflict",
+      );
+      await client.query(
+        "release savepoint expected_iptv_idempotency_conflict",
+      );
+
+      await one<{ id: string }>(
+        client,
+        "select reverse_journal_entry($1,'Correction abonnement test') as id",
+        [renewed.entry_id],
+      );
+      const reversed = await one<{ status: string; sale_status: string }>(
+        client,
+        `select s.status,sa.status::text as sale_status
+         from iptv_subscriptions s join sales sa on sa.id=s.sale_id where s.id=$1`,
+        [renewal.id],
+      );
+      expect(reversed).toEqual({
+        status: "cancelled",
+        sale_status: "cancelled",
+      });
+    });
+  });
+
+  it("enforces IPTV role permissions and household isolation", async () => {
+    await asUser(readerId, async (client) => {
+      await expect(recordIptv(client, {})).rejects.toThrow(/not allowed/);
+    });
+    await asUser(otherOwnerId, async (client) => {
+      await expect(
+        one(client, "select * from get_iptv_overview($1,'2026-07-22')", [
+          refs.householdId,
+        ]),
+      ).rejects.toThrow(/not allowed/);
+    });
+    await asUser(operatorId, async (client) => {
+      const activation = await recordIptv(client, {
+        customerName: "Client opérateur",
+        customerIdentifier: `operator-${randomUUID()}`,
+      });
+      expect(activation.id).toMatch(/^[0-9a-f-]{36}$/);
     });
   });
 

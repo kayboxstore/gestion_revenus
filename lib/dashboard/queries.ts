@@ -1,4 +1,5 @@
 import { hasSupabaseEnv, createClient } from "@/lib/supabase/server";
+import { getIptvAlertCount } from "@/lib/dashboard/iptv-alerts";
 
 export type DashboardKpis = {
   revenue: string;
@@ -38,6 +39,14 @@ export type DashboardSale = {
   total_source: string;
   status: string;
 };
+export type DashboardIptvAlert = {
+  subscription_id: string;
+  customer_name: string;
+  customer_identifier: string;
+  expiration_date: string;
+  lifecycle_status: "expiring" | "expired";
+  total_count: string | number;
+};
 export type HouseholdMember = {
   user_id: string;
   role: "owner" | "manager" | "operator" | "reader";
@@ -74,6 +83,8 @@ export type DashboardData = {
   openSales: DashboardSale[];
   members: HouseholdMember[];
   invitations: Invitation[];
+  iptvAlerts: DashboardIptvAlert[];
+  iptvAlertCount: number;
   reports: DashboardReports;
 };
 
@@ -120,6 +131,8 @@ export async function getDashboardData(
       openSales: [],
       members: [],
       invitations: [],
+      iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
@@ -144,6 +157,8 @@ export async function getDashboardData(
       openSales: [],
       members: [],
       invitations: [],
+      iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
@@ -172,11 +187,19 @@ export async function getDashboardData(
       openSales: [],
       members: [],
       invitations: [],
+      iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
 
   const householdId = member.household_id as string;
+  const kinshasaToday = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Kinshasa",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
   let operationsQuery = supabase
     .from("journal_entries")
     .select(
@@ -210,6 +233,7 @@ export async function getDashboardData(
     { data: stock },
     { data: receivables },
     { data: savingsProgress },
+    { data: iptvAlerts },
   ] = await Promise.all([
     supabase.rpc("get_dashboard_kpis", {
       p_household_id: householdId,
@@ -282,6 +306,14 @@ export async function getDashboardData(
     supabase.rpc("get_stock_report", { p_household_id: householdId }),
     supabase.rpc("get_receivables_report", { p_household_id: householdId }),
     supabase.rpc("get_savings_progress", { p_household_id: householdId }),
+    supabase.rpc("get_iptv_subscriptions", {
+      p_household_id: householdId,
+      p_status: "attention",
+      p_search: null,
+      p_as_of: kinshasaToday,
+      p_limit: 4,
+      p_offset: 0,
+    }),
   ]);
 
   const inventoryByProduct = new Map(
@@ -292,6 +324,7 @@ export async function getDashboardData(
       }>
     ).map((row) => [row.product_id, String(row.quantity)]),
   );
+  const iptvAlertRows = (iptvAlerts ?? []) as DashboardIptvAlert[];
 
   return {
     configured: true,
@@ -328,6 +361,8 @@ export async function getDashboardData(
         null,
     })),
     invitations: (invitations ?? []) as Invitation[],
+    iptvAlerts: iptvAlertRows,
+    iptvAlertCount: getIptvAlertCount(iptvAlertRows),
     reports: {
       activityMargins: (activityMargins ?? []) as ReportRow[],
       expensesByCategory: (expensesByCategory ?? []) as ReportRow[],

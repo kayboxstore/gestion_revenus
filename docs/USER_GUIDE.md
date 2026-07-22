@@ -25,6 +25,17 @@ un **Comptage physique**. Le comptage produit un rapport d’écart mais ne modi
 jamais silencieusement le stock comptable ni le résultat ; toute correction doit
 rester une opération explicite et auditée.
 
+## Clients IPTV
+
+1. Ouvrir **Activités**, puis **Gérer les clients et échéances** sur la carte IPTV.
+2. Utiliser **Activer un nouveau client** pour saisir le nom, le téléphone facultatif, l’identifiant IPTV, la formule et la date d’activation.
+3. Choisir **Payé maintenant** pour encaisser sur un compte dans la devise de la formule, ou **À crédit** pour créer une créance avec échéance.
+4. Le prix et la durée viennent de la formule. La vente, l’écriture comptable, le client et la période d’abonnement sont validés ensemble.
+5. Les abonnements proches de l’échéance ou expirés apparaissent dans **À surveiller** sur l’accueil et dans les filtres du module IPTV.
+6. Utiliser **Renouveler** sur la fiche client : une nouvelle période est ajoutée après la précédente sans réécrire l’historique.
+7. Le propriétaire ou le gestionnaire peut créer, désactiver et réactiver les formules. Un opérateur peut activer et renouveler, tandis qu’un lecteur consulte seulement.
+8. L’annulation de la vente depuis **Opérations** crée l’écriture inverse et annule uniquement la période IPTV liée.
+
 ## Épargne
 
 Créez d’abord un objectif dans **Plus > Objectifs d’épargne**. Enregistrez ensuite

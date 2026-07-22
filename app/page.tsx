@@ -49,6 +49,14 @@ function kinshasaDateLabel() {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function shortDateLabel(value: string) {
+  return new Intl.DateTimeFormat("fr-CD", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Kinshasa",
+  }).format(new Date(`${value}T12:00:00Z`));
+}
+
 function periodRange(period: string, customFrom?: string, customTo?: string) {
   if (period === "all") return { from: null, to: null };
   if (period === "custom") {
@@ -179,7 +187,8 @@ export default async function Home({
   const activityMarginByLabel = new Map(
     data.reports.activityMargins.map((row) => [row.label, row.amount]),
   );
-  const alertCount = outOfStockProducts.length + data.openSales.length;
+  const alertCount =
+    outOfStockProducts.length + data.openSales.length + data.iptvAlertCount;
   const quickActions: Array<{
     label: string;
     detail: string;
@@ -503,6 +512,13 @@ export default async function Home({
                 {data.openSales.length} créance
                 {data.openSales.length > 1 ? "s" : ""} ouverte
                 {data.openSales.length > 1 ? "s" : ""}
+                {data.iptvAlertCount > 0 && (
+                  <>
+                    {" "}
+                    · {data.iptvAlertCount} échéance
+                    {data.iptvAlertCount > 1 ? "s" : ""} IPTV
+                  </>
+                )}
               </p>
               <Link href="/reports">
                 Lire le détail <AppIcon name="arrow" />
@@ -521,7 +537,8 @@ export default async function Home({
                     <span className="attention-count">{alertCount}</span>
                   </div>
                   {outOfStockProducts.length === 0 &&
-                  data.openSales.length === 0 ? (
+                  data.openSales.length === 0 &&
+                  data.iptvAlertCount === 0 ? (
                     <div className="all-clear-state">
                       <span>
                         <AppIcon name="check" />
@@ -551,6 +568,30 @@ export default async function Home({
                           <AppIcon name="arrow" />
                         </Link>
                       ))}
+                      {data.iptvAlerts.length > 0 && (
+                        <Link
+                          href={`/activities/iptv?status=${data.iptvAlerts[0].lifecycle_status}`}
+                          className="attention-item"
+                        >
+                          <span data-level="warning">
+                            <AppIcon name="signal" />
+                          </span>
+                          <div>
+                            <strong>
+                              {data.iptvAlertCount} abonnement
+                              {data.iptvAlertCount > 1 ? "s" : ""} IPTV à
+                              traiter
+                            </strong>
+                            <small>
+                              {data.iptvAlerts[0].customer_name} · échéance le{" "}
+                              {shortDateLabel(
+                                data.iptvAlerts[0].expiration_date,
+                              )}
+                            </small>
+                          </div>
+                          <AppIcon name="arrow" />
+                        </Link>
+                      )}
                       {data.openSales.length > 0 && (
                         <Link href="/reports" className="attention-item">
                           <span data-level="info">
