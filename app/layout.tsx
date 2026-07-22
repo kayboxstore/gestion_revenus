@@ -1,8 +1,6 @@
 import "./globals.css";
-import "./olive-future.css";
-import "./dashboard-editorial.css";
 import "./stock.css";
-import "./kayembe-signature.css";
+import "./modern-classic.css";
 import type { Metadata, Viewport } from "next";
 import { APP_BRAND } from "@/lib/brand";
 import { PwaRegister } from "./pwa-register";
@@ -18,7 +16,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f3e8",
+  themeColor: "#f4f1e9",
 };
 export default function RootLayout({
   children,

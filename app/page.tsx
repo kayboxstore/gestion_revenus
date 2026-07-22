@@ -242,9 +242,8 @@ export default async function Home({
               </span>
             </div>
             <div className="editorial-masthead-center" aria-hidden="true">
-              <span>Vision</span>
-              <span>Activités</span>
-              <span>Patrimoine</span>
+              <span>Vue d’ensemble</span>
+              <span>Gestion quotidienne</span>
             </div>
             <div className="editorial-session">
               <span>{data.householdName ?? "Espace familial"}</span>
@@ -266,16 +265,15 @@ export default async function Home({
           <div className="editorial-hero-layout">
             <div className="editorial-hero-copy">
               <p className="editorial-kicker">
-                <i aria-hidden="true" /> 01 — Bonjour, famille{" "}
-                {householdGreeting}
+                Tableau de bord · Famille {householdGreeting}
               </p>
               <h1>
-                Votre foyer,
-                <em> en mouvement.</em>
+                Vos finances,
+                <em> simplement.</em>
               </h1>
               <p className="editorial-hero-description">
-                Une vision vivante et précise de ce que votre famille gagne,
-                protège et prépare pour demain.
+                Une lecture claire de la trésorerie, du résultat et des
+                priorités du foyer.
               </p>
               <div className="editorial-hero-actions">
                 <Link
@@ -292,20 +290,13 @@ export default async function Home({
             </div>
 
             <div className="editorial-finance-art">
-              <div className="editorial-art-geometry" aria-hidden="true">
-                <span className="editorial-shape editorial-shape-arch" />
-                <span className="editorial-shape editorial-shape-orb" />
-                <span className="editorial-shape editorial-shape-column" />
-                <span className="editorial-shape editorial-shape-base" />
-                <span className="editorial-shape editorial-shape-line" />
-              </div>
               <div className="editorial-art-balance">
-                <small>Trésorerie disponible</small>
+                <small>Trésorerie totale</small>
                 <strong className="tabular">
                   {formatMoney(data.kpis.cash)}
                 </strong>
                 <span>
-                  <i aria-hidden="true" /> Écritures validées uniquement
+                  <i aria-hidden="true" /> Soldes issus des écritures validées
                 </span>
               </div>
               <div className="editorial-art-ledger">
@@ -322,9 +313,6 @@ export default async function Home({
                   <strong>{data.openSales.length}</strong>
                 </div>
               </div>
-              <span className="editorial-art-signature" aria-hidden="true">
-                Famille Kayembe · Kinshasa
-              </span>
             </div>
           </div>
         </section>
@@ -421,8 +409,8 @@ export default async function Home({
             <section className="editorial-overview animate-enter">
               <header className="editorial-section-heading">
                 <div>
-                  <span>02 — Synthèse</span>
-                  <h2>Le portrait financier du foyer</h2>
+                  <span>Vue d’ensemble</span>
+                  <h2>Les chiffres essentiels</h2>
                 </div>
                 <p>
                   Cinq repères essentiels, calculés sans confondre revenu,
@@ -430,15 +418,12 @@ export default async function Home({
                 </p>
               </header>
               <div className="kpi-grid" aria-label="Indicateurs financiers">
-                {cards.map((card, index) => (
+                {cards.map((card) => (
                   <article
                     key={card.label}
                     className="kpi-card"
                     data-tone={card.tone}
                   >
-                    <span className="kpi-card-index">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
                     <span className="kpi-icon">
                       <AppIcon name={card.icon} />
                     </span>
@@ -455,8 +440,8 @@ export default async function Home({
             <section className="dashboard-section surface-card editorial-action-section animate-enter">
               <div className="section-title editorial-section-title">
                 <div>
-                  <span className="editorial-panel-index">03 — Actions</span>
-                  <h2>Ajouter en un geste</h2>
+                  <span className="editorial-panel-index">Accès direct</span>
+                  <h2>Actions rapides</h2>
                   <p>
                     Choisissez l’intention, l’application adapte le formulaire.
                   </p>
@@ -487,7 +472,7 @@ export default async function Home({
 
             <section className="editorial-briefing animate-enter">
               <div>
-                <span>Brief financier</span>
+                <span>Situation du jour</span>
                 <strong>
                   {alertCount === 0
                     ? "Votre foyer avance sans alerte critique."
@@ -517,9 +502,7 @@ export default async function Home({
                 <section className="dashboard-section surface-card editorial-dashboard-panel animate-enter">
                   <div className="section-title editorial-section-title">
                     <div>
-                      <span className="editorial-panel-index">
-                        04 — Vigilance
-                      </span>
+                      <span className="editorial-panel-index">Suivi</span>
                       <h2>À surveiller</h2>
                       <p>Les éléments qui méritent votre attention.</p>
                     </div>
@@ -579,9 +562,7 @@ export default async function Home({
                 <section className="dashboard-section surface-card editorial-dashboard-panel animate-enter">
                   <div className="section-title editorial-section-title">
                     <div>
-                      <span className="editorial-panel-index">
-                        05 — Activités
-                      </span>
+                      <span className="editorial-panel-index">Activités</span>
                       <h2>Vos activités</h2>
                       <p>Le statut et le résultat de chaque moteur du foyer.</p>
                     </div>
@@ -622,7 +603,7 @@ export default async function Home({
               <section className="dashboard-section surface-card recent-section editorial-dashboard-panel animate-enter">
                 <div className="section-title editorial-section-title">
                   <div>
-                    <span className="editorial-panel-index">06 — Journal</span>
+                    <span className="editorial-panel-index">Journal</span>
                     <h2>Activité récente</h2>
                     <p>Les dernières écritures validées.</p>
                   </div>
