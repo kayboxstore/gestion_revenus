@@ -56,7 +56,7 @@ export default async function LoginPage({
       <section className="auth-showcase">
         <figure className="auth-family-photo">
           <Image
-            src="/images/famille-kayembe.webp"
+            src="/images/famille-kayembe.jpg"
             alt="Portrait du couple Kayembe"
             fill
             priority
