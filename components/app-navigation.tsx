@@ -53,7 +53,7 @@ export function AppNavigation() {
           })}
         </div>
       </nav>
-      {pathname !== "/operations" && pathname !== "/stock" && (
+      {pathname === "/" && (
         <Link
           className="app-floating-action"
           href="/operations"

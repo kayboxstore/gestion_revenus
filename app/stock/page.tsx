@@ -47,7 +47,7 @@ export default async function Page({
           actions={
             <span className="stock-live-pill">
               <span aria-hidden="true" />
-              Calculé en temps réel
+              Données validées
             </span>
           }
         />

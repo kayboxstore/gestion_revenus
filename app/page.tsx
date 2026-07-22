@@ -39,6 +39,16 @@ function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function kinshasaDateLabel() {
+  const label = new Intl.DateTimeFormat("fr-CD", {
+    timeZone: "Africa/Kinshasa",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function periodRange(period: string, customFrom?: string, customTo?: string) {
   if (period === "all") return { from: null, to: null };
   if (period === "custom") {
@@ -112,6 +122,10 @@ export default async function Home({
     /^famille\s+/i,
     "",
   );
+  const welcomeHousehold = /^foyer\b/i.test(householdGreeting)
+    ? householdGreeting
+    : `famille ${householdGreeting}`;
+  const todayLabel = kinshasaDateLabel();
   const cards: Array<{
     label: string;
     value: string;
@@ -242,7 +256,7 @@ export default async function Home({
               </span>
             </div>
             <div className="editorial-masthead-center" aria-hidden="true">
-              <span>Vue d’ensemble</span>
+              <span>Patrimoine familial</span>
               <span>Gestion quotidienne</span>
             </div>
             <div className="editorial-session">
@@ -264,16 +278,14 @@ export default async function Home({
 
           <div className="editorial-hero-layout">
             <div className="editorial-hero-copy">
-              <p className="editorial-kicker">
-                Tableau de bord · Famille {householdGreeting}
-              </p>
+              <p className="editorial-kicker">{todayLabel} · Kinshasa</p>
               <h1>
-                Vos finances,
-                <em> simplement.</em>
+                Bienvenue,
+                <em> {welcomeHousehold}.</em>
               </h1>
               <p className="editorial-hero-description">
-                Une lecture claire de la trésorerie, du résultat et des
-                priorités du foyer.
+                Votre trésorerie, vos résultats et les priorités du foyer dans
+                une seule vue claire.
               </p>
               <div className="editorial-hero-actions">
                 <Link
@@ -291,7 +303,7 @@ export default async function Home({
 
             <div className="editorial-finance-art">
               <div className="editorial-art-balance">
-                <small>Trésorerie totale</small>
+                <small>Trésorerie disponible</small>
                 <strong className="tabular">
                   {formatMoney(data.kpis.cash)}
                 </strong>
