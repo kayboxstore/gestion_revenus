@@ -1790,7 +1790,7 @@ summary:focus-visible {
 
 .auth-family-photo {
   position: absolute;
-  z-index: -2;
+  z-index: 0;
   inset: 0;
   margin: 0;
   overflow: hidden;
@@ -1799,6 +1799,13 @@ summary:focus-visible {
 .auth-family-photo img {
   object-fit: cover;
   object-position: 50% 30%;
+}
+
+.auth-brand,
+.auth-showcase-copy,
+.auth-feature-grid {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-family-photo::after {
