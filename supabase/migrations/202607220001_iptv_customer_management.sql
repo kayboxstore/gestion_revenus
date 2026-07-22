@@ -112,6 +112,8 @@ declare
   v_entry_id uuid;
   v_sale_id uuid;
   v_subscription_id uuid;
+  v_base_currency text;
+  v_exchange_rate numeric(20,8);
   start_date date := p_activation_date;
   end_date date;
   customer_name text := nullif(trim(p_customer_name),'');
@@ -146,6 +148,15 @@ begin
     select 1 from currencies
     where household_id=p_household_id and code=plan_rec.currency and active
   ) then raise exception 'IPTV plan currency is inactive'; end if;
+  select h.base_currency into v_base_currency
+  from households h
+  where h.id=p_household_id
+  for share;
+  if v_base_currency is null then raise exception 'household base currency is required'; end if;
+  v_exchange_rate := case
+    when plan_rec.currency=v_base_currency then 1
+    else p_exchange_rate
+  end;
 
   select p.id into v_product_id
   from products p
@@ -195,7 +206,7 @@ begin
 
   v_entry_id := record_financial_operation(
     p_household_id,p_payment_type,plan_rec.price,plan_rec.currency,
-    p_exchange_rate,description,'IPTV',p_idempotency_key,payload
+    v_exchange_rate,description,'IPTV',p_idempotency_key,payload
   );
 
   select s.id into v_subscription_id

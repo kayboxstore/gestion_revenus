@@ -188,7 +188,7 @@ export default async function Home({
     data.reports.activityMargins.map((row) => [row.label, row.amount]),
   );
   const alertCount =
-    outOfStockProducts.length + data.openSales.length + data.iptvAlerts.length;
+    outOfStockProducts.length + data.openSales.length + data.iptvAlertCount;
   const quickActions: Array<{
     label: string;
     detail: string;
@@ -512,11 +512,11 @@ export default async function Home({
                 {data.openSales.length} créance
                 {data.openSales.length > 1 ? "s" : ""} ouverte
                 {data.openSales.length > 1 ? "s" : ""}
-                {data.iptvAlerts.length > 0 && (
+                {data.iptvAlertCount > 0 && (
                   <>
                     {" "}
-                    · {data.iptvAlerts.length} échéance
-                    {data.iptvAlerts.length > 1 ? "s" : ""} IPTV
+                    · {data.iptvAlertCount} échéance
+                    {data.iptvAlertCount > 1 ? "s" : ""} IPTV
                   </>
                 )}
               </p>
@@ -538,7 +538,7 @@ export default async function Home({
                   </div>
                   {outOfStockProducts.length === 0 &&
                   data.openSales.length === 0 &&
-                  data.iptvAlerts.length === 0 ? (
+                  data.iptvAlertCount === 0 ? (
                     <div className="all-clear-state">
                       <span>
                         <AppIcon name="check" />
@@ -578,8 +578,8 @@ export default async function Home({
                           </span>
                           <div>
                             <strong>
-                              {data.iptvAlerts.length} abonnement
-                              {data.iptvAlerts.length > 1 ? "s" : ""} IPTV à
+                              {data.iptvAlertCount} abonnement
+                              {data.iptvAlertCount > 1 ? "s" : ""} IPTV à
                               traiter
                             </strong>
                             <small>

@@ -1,4 +1,5 @@
 import { hasSupabaseEnv, createClient } from "@/lib/supabase/server";
+import { getIptvAlertCount } from "@/lib/dashboard/iptv-alerts";
 
 export type DashboardKpis = {
   revenue: string;
@@ -44,6 +45,7 @@ export type DashboardIptvAlert = {
   customer_identifier: string;
   expiration_date: string;
   lifecycle_status: "expiring" | "expired";
+  total_count: string | number;
 };
 export type HouseholdMember = {
   user_id: string;
@@ -82,6 +84,7 @@ export type DashboardData = {
   members: HouseholdMember[];
   invitations: Invitation[];
   iptvAlerts: DashboardIptvAlert[];
+  iptvAlertCount: number;
   reports: DashboardReports;
 };
 
@@ -129,6 +132,7 @@ export async function getDashboardData(
       members: [],
       invitations: [],
       iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
@@ -154,6 +158,7 @@ export async function getDashboardData(
       members: [],
       invitations: [],
       iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
@@ -183,6 +188,7 @@ export async function getDashboardData(
       members: [],
       invitations: [],
       iptvAlerts: [],
+      iptvAlertCount: 0,
       reports: emptyReports,
     };
   }
@@ -318,6 +324,7 @@ export async function getDashboardData(
       }>
     ).map((row) => [row.product_id, String(row.quantity)]),
   );
+  const iptvAlertRows = (iptvAlerts ?? []) as DashboardIptvAlert[];
 
   return {
     configured: true,
@@ -354,7 +361,8 @@ export async function getDashboardData(
         null,
     })),
     invitations: (invitations ?? []) as Invitation[],
-    iptvAlerts: (iptvAlerts ?? []) as DashboardIptvAlert[],
+    iptvAlerts: iptvAlertRows,
+    iptvAlertCount: getIptvAlertCount(iptvAlertRows),
     reports: {
       activityMargins: (activityMargins ?? []) as ReportRow[],
       expensesByCategory: (expensesByCategory ?? []) as ReportRow[],

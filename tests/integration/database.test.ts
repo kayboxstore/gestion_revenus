@@ -362,6 +362,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         customerPhone: "+243810203040",
         customerIdentifier: identifier,
         activationDate: "2026-07-22",
+        rate: "2",
         key: activationKey,
       });
       const activated = await one<{
@@ -373,11 +374,13 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         entry_status: string;
         entry_id: string;
         sale_id: string;
+        total_base: string;
       }>(
         client,
         `select s.activation_date::text,s.expiration_date::text,s.status,
           c.name as customer,sa.status::text as sale_status,
-          e.status::text as entry_status,e.id as entry_id,sa.id as sale_id
+          e.status::text as entry_status,e.id as entry_id,sa.id as sale_id,
+          sa.total_base::text
          from iptv_subscriptions s
          join contacts c on c.id=s.contact_id
          join sales sa on sa.id=s.sale_id
@@ -392,15 +395,22 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         customer: "Grâce Kayembe",
         sale_status: "paid",
         entry_status: "posted",
+        total_base: "10.0000",
       });
-      const activationTotals = await one<{ debit: string; credit: string }>(
+      const activationTotals = await one<{
+        debit: string;
+        credit: string;
+        unit_rate: boolean;
+      }>(
         client,
-        `select sum(debit_base)::text as debit,sum(credit_base)::text as credit
+        `select sum(debit_base)::text as debit,sum(credit_base)::text as credit,
+          bool_and(exchange_rate=1) as unit_rate
          from journal_lines where journal_entry_id=$1`,
         [activated.entry_id],
       );
       expect(activationTotals.debit).toBe("10.0000");
       expect(activationTotals.credit).toBe("10.0000");
+      expect(activationTotals.unit_rate).toBe(true);
       const serviceMovement = await one<{ count: string }>(
         client,
         "select count(*)::text as count from stock_movements where reference_id=$1",
