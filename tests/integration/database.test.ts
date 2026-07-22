@@ -476,6 +476,7 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
         total_count: "1",
       });
 
+      await client.query("savepoint expected_iptv_idempotency_conflict");
       await expect(
         recordIptv(client, {
           renewedFromId: activation.id,
@@ -486,6 +487,12 @@ databaseDescribe("real PostgreSQL financial and RLS acceptance", () => {
           key: renewalKey,
         }),
       ).rejects.toThrow(/idempotency key conflict/);
+      await client.query(
+        "rollback to savepoint expected_iptv_idempotency_conflict",
+      );
+      await client.query(
+        "release savepoint expected_iptv_idempotency_conflict",
+      );
 
       await one<{ id: string }>(
         client,
